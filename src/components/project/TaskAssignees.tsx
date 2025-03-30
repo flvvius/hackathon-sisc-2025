@@ -10,9 +10,15 @@ import {
   PopoverTrigger,
 } from "~/components/ui/popover";
 import { ScrollArea } from "~/components/ui/scroll-area";
-import { UserPlus, X } from "lucide-react";
+import { UserPlus, X, Github, GitBranch } from "lucide-react";
 import { useBoardMembers } from "~/hooks/useBoardMembers";
 import { type UserInfo } from "~/lib/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
 
 interface TaskAssigneesProps {
   boardId: string;
@@ -77,7 +83,31 @@ export default function TaskAssignees({
                   {getInitials(assignee.name)}
                 </AvatarFallback>
               </Avatar>
-              <span className="text-xs">{assignee.name || "User"}</span>
+              <span className="flex items-center gap-1 text-xs">
+                {assignee.name ?? "User"}
+
+                {/* Show GitHub username if available */}
+                {assignee.githubUsername && (
+                  <Badge
+                    variant="secondary"
+                    className="h-4 bg-slate-100 px-1 py-0 font-mono text-[8px]"
+                  >
+                    <Github className="mr-0.5 h-2.5 w-2.5" />@
+                    {assignee.githubUsername}
+                  </Badge>
+                )}
+
+                {/* Show GitLab username if available */}
+                {assignee.gitlabUsername && (
+                  <Badge
+                    variant="secondary"
+                    className="h-4 bg-orange-50 px-1 py-0 font-mono text-[8px] text-orange-700"
+                  >
+                    <GitBranch className="mr-0.5 h-2.5 w-2.5" />@
+                    {assignee.gitlabUsername}
+                  </Badge>
+                )}
+              </span>
               <Button
                 variant="ghost"
                 size="sm"
@@ -97,7 +127,7 @@ export default function TaskAssignees({
               <UserPlus className="h-3.5 w-3.5" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-[220px] p-0" align="start">
+          <PopoverContent className="w-[250px] p-0" align="start">
             <ScrollArea className="h-[300px]">
               <div className="p-2">
                 <div className="p-2 text-sm font-medium">Assign Users</div>
@@ -135,6 +165,8 @@ export default function TaskAssignees({
                               name: user.name,
                               email: user.email,
                               imageUrl: user.imageUrl,
+                              githubUsername: user.githubUsername,
+                              gitlabUsername: user.gitlabUsername,
                             })
                           }
                         >
@@ -147,7 +179,23 @@ export default function TaskAssignees({
                               {getInitials(user.name)}
                             </AvatarFallback>
                           </Avatar>
-                          <span>{user.name || user.email}</span>
+                          <div className="flex flex-col">
+                            <span>{user.name ?? user.email}</span>
+                            <div className="flex items-center gap-1">
+                              {user.githubUsername && (
+                                <span className="text-muted-foreground flex items-center text-[10px]">
+                                  <Github className="mr-0.5 h-3 w-3" />@
+                                  {user.githubUsername}
+                                </span>
+                              )}
+                              {user.gitlabUsername && (
+                                <span className="text-muted-foreground ml-1 flex items-center text-[10px]">
+                                  <GitBranch className="mr-0.5 h-3 w-3" />@
+                                  {user.gitlabUsername}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </button>
                       );
                     })}

@@ -6,6 +6,8 @@ export interface UserInfo {
   name?: string | null;
   email?: string | null;
   imageUrl?: string | null;
+  githubUsername?: string | null;
+  gitlabUsername?: string | null;
 }
 
 // Frontend types (fully typed with required properties)

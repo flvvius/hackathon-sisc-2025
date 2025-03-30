@@ -5,6 +5,7 @@ import { boards, lists, cards, boardMembers } from "~/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import type { BoardMemberRole } from "./boardMembers";
+import { auth } from "@clerk/nextjs/server";
 
 export async function getUserBoards(userId: string) {
   if (!userId) return [];
@@ -173,6 +174,37 @@ export async function createCard(
   }
 
   try {
+    // Get the list to find its board ID
+    const list = await db.query.lists.findFirst({
+      where: eq(lists.id, listId),
+    });
+
+    if (!list) {
+      throw new Error("List not found");
+    }
+
+    // Check user's role on this board
+    const { userId } = await auth();
+    if (!userId) {
+      throw new Error("You must be logged in to create cards");
+    }
+
+    const member = await db.query.boardMembers.findFirst({
+      where: and(
+        eq(boardMembers.boardId, list.boardId),
+        eq(boardMembers.userId, userId),
+      ),
+    });
+
+    if (!member) {
+      throw new Error("You do not have access to this board");
+    }
+
+    // Viewers cannot create cards
+    if (member.role === "viewer") {
+      throw new Error("Viewers do not have permission to create cards");
+    }
+
     const cardId = uuidv4();
 
     // Filter and clean up labels if provided
@@ -206,7 +238,11 @@ export async function createCard(
     });
   } catch (error) {
     console.error("Failed to create card:", error);
-    throw new Error("Failed to create card");
+    if (error instanceof Error) {
+      throw new Error(error.message);
+    } else {
+      throw new Error("Failed to create card");
+    }
   }
 }
 
@@ -268,6 +304,46 @@ export async function updateCard(
   }
 
   try {
+    // Get the card first to check permissions
+    const card = await db.query.cards.findFirst({
+      where: eq(cards.id, cardId),
+    });
+
+    if (!card) {
+      throw new Error("Card not found");
+    }
+
+    // Get the list to find board ID
+    const list = await db.query.lists.findFirst({
+      where: eq(lists.id, card.listId),
+    });
+
+    if (!list) {
+      throw new Error("List not found");
+    }
+
+    // Check user's role on this board
+    const { userId } = await auth();
+    if (!userId) {
+      throw new Error("You must be logged in to update cards");
+    }
+
+    const member = await db.query.boardMembers.findFirst({
+      where: and(
+        eq(boardMembers.boardId, list.boardId),
+        eq(boardMembers.userId, userId),
+      ),
+    });
+
+    if (!member) {
+      throw new Error("You do not have access to this board");
+    }
+
+    // Viewers cannot update cards
+    if (member.role === "viewer") {
+      throw new Error("Viewers do not have permission to update cards");
+    }
+
     // If labels are provided, ensure they're valid
     if (data.labels) {
       // Validate each label has text and color
@@ -292,7 +368,11 @@ export async function updateCard(
     });
   } catch (error) {
     console.error("Failed to update card:", error);
-    throw new Error("Failed to update card");
+    if (error instanceof Error) {
+      throw new Error(error.message);
+    } else {
+      throw new Error("Failed to update card");
+    }
   }
 }
 
@@ -302,11 +382,55 @@ export async function deleteCard(cardId: string) {
   }
 
   try {
+    // Get the card first to check permissions
+    const card = await db.query.cards.findFirst({
+      where: eq(cards.id, cardId),
+    });
+
+    if (!card) {
+      throw new Error("Card not found");
+    }
+
+    // Get the list to find board ID
+    const list = await db.query.lists.findFirst({
+      where: eq(lists.id, card.listId),
+    });
+
+    if (!list) {
+      throw new Error("List not found");
+    }
+
+    // Check user's role on this board
+    const { userId } = await auth();
+    if (!userId) {
+      throw new Error("You must be logged in to delete cards");
+    }
+
+    const member = await db.query.boardMembers.findFirst({
+      where: and(
+        eq(boardMembers.boardId, list.boardId),
+        eq(boardMembers.userId, userId),
+      ),
+    });
+
+    if (!member) {
+      throw new Error("You do not have access to this board");
+    }
+
+    // Viewers cannot delete cards
+    if (member.role === "viewer") {
+      throw new Error("Viewers do not have permission to delete cards");
+    }
+
     await db.delete(cards).where(eq(cards.id, cardId));
     return true;
   } catch (error) {
     console.error("Failed to delete card:", error);
-    throw new Error("Failed to delete card");
+    if (error instanceof Error) {
+      throw new Error(error.message);
+    } else {
+      throw new Error("Failed to delete card");
+    }
   }
 }
 

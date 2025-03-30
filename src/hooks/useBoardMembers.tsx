@@ -55,6 +55,14 @@ export const BoardMembersProvider = ({
     setError(null);
     try {
       const boardMembers = await getBoardMembers(boardId);
+      console.log("Board members data:", boardMembers);
+      if (boardMembers.length > 0 && boardMembers[0].user) {
+        console.log("First member user object:", boardMembers[0].user);
+        console.log(
+          "User object properties:",
+          Object.keys(boardMembers[0].user ?? {}),
+        );
+      }
       setMembers(boardMembers);
     } catch (err) {
       console.error("Failed to fetch board members:", err);
@@ -76,6 +84,8 @@ export const BoardMembersProvider = ({
       try {
         const newMember = await addBoardMember(boardId, email, role);
         if (newMember) {
+          console.log("New member added with data:", newMember);
+          console.log("User object:", newMember.user);
           setMembers((prev) => [...prev, newMember]);
           toast.success(`${email} added to the board`);
         }

@@ -10,6 +10,8 @@ import {
   Pencil,
   Trash2,
   UserCircle,
+  Github,
+  GitBranch,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -61,11 +63,59 @@ const getInitials = (name: string | null | undefined) => {
     .substring(0, 2);
 };
 
+// Helper to render assignee avatar with GitHub/GitLab username tags
+const AssigneeAvatar = ({ assignee }: { assignee: UserInfo }) => {
+  return (
+    <div className="group relative">
+      <Avatar className="border-background h-5 w-5 border">
+        <AvatarImage
+          src={assignee.imageUrl ?? undefined}
+          alt={assignee.name ?? "User"}
+        />
+        <AvatarFallback className="text-[8px]">
+          {getInitials(assignee.name)}
+        </AvatarFallback>
+      </Avatar>
+
+      {/* GitHub/GitLab username tooltip on hover */}
+      {(assignee.githubUsername || assignee.gitlabUsername) && (
+        <div className="absolute -bottom-8 left-1/2 z-50 hidden -translate-x-1/2 transform flex-col items-center group-hover:flex">
+          <div className="rounded bg-black p-1 text-[9px] whitespace-nowrap text-white shadow">
+            {assignee.githubUsername && (
+              <div className="flex items-center">
+                <Github className="mr-1 h-2.5 w-2.5" />@
+                {assignee.githubUsername}
+              </div>
+            )}
+            {assignee.gitlabUsername && (
+              <div className="mt-0.5 flex items-center">
+                <GitBranch className="mr-1 h-2.5 w-2.5" />@
+                {assignee.gitlabUsername}
+              </div>
+            )}
+          </div>
+          <div className="-mt-1 h-2 w-2 rotate-45 bg-black"></div>
+        </div>
+      )}
+
+      {/* Badge indicator for GitHub/GitLab */}
+      {(assignee.githubUsername || assignee.gitlabUsername) && (
+        <div className="bg-background absolute -right-1 -bottom-1 flex h-2.5 w-2.5 items-center justify-center rounded-full">
+          <span className="text-[7px] font-bold">@</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
 interface KanbanCardProps {
   card: CardItem;
   listId: string;
   boardId: string;
-  updateCard: (cardId: string, data: Partial<CardItem>) => void;
+  updateCard: (
+    cardId: string,
+    data: Partial<CardItem> & { _shouldSort?: boolean },
+  ) => void;
   deleteCard: () => void;
 }
 
@@ -117,12 +167,16 @@ export default function KanbanCard({
   const handleSaveChanges = () => {
     if (!editTitle.trim()) return;
 
+    // Check if status has changed
+    const statusChanged = editStatus !== (card.status ?? "todo");
+
     updateCard(card.id, {
       title: editTitle,
       description: editDescription,
       status: editStatus,
       labels: editLabels,
       assignees: editAssignees,
+      _shouldSort: statusChanged, // Only sort if status has changed
     });
 
     setIsDialogOpen(false);
@@ -155,8 +209,11 @@ export default function KanbanCard({
         newStatus = "todo";
     }
 
-    // Update the card directly
-    updateCard(card.id, { status: newStatus });
+    // Update the card with new status and a special flag to trigger sorting
+    updateCard(card.id, {
+      status: newStatus,
+      _shouldSort: true, // Special flag to indicate sorting should happen
+    });
   };
 
   // Status icon based on current status
@@ -244,18 +301,7 @@ export default function KanbanCard({
               <UserCircle className="text-muted-foreground h-3.5 w-3.5" />
               <div className="flex -space-x-2">
                 {card.assignees.slice(0, 3).map((assignee) => (
-                  <Avatar
-                    key={assignee.id}
-                    className="border-background h-5 w-5 border"
-                  >
-                    <AvatarImage
-                      src={assignee.imageUrl ?? undefined}
-                      alt={assignee.name ?? "User"}
-                    />
-                    <AvatarFallback className="text-[8px]">
-                      {getInitials(assignee.name)}
-                    </AvatarFallback>
-                  </Avatar>
+                  <AssigneeAvatar key={assignee.id} assignee={assignee} />
                 ))}
                 {card.assignees.length > 3 && (
                   <div className="border-background bg-muted flex h-5 w-5 items-center justify-center rounded-full border text-[8px] font-medium">

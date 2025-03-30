@@ -100,7 +100,12 @@ export default function KanbanBoard() {
         // Transform database board lists to our List type
         const transformedLists: ListItem[] = boardLists
           .map(convertToListItem)
-          .filter((list): list is ListItem => list !== null);
+          .filter((list): list is ListItem => list !== null)
+          .map((list) => ({
+            ...list,
+            // Sort cards by status for initial render
+            cards: sortCardsByStatus(list.cards),
+          }));
 
         setLists(transformedLists);
       } catch (err) {
@@ -130,13 +135,16 @@ export default function KanbanBoard() {
     }>,
   ) => {
     try {
+      // The order of parameters matters: listId, title, description, type, labels, assignees
       const newCard = await createCard(
         listId,
         title,
         description,
-        undefined,
-        assignees,
+        "project", // Use "project" as the default type instead of undefined
+        undefined, // labels is undefined
+        assignees, // assignees in the correct position
       );
+
       if (!newCard) {
         toast.error("Failed to create card: Invalid response");
         return null;
@@ -164,7 +172,16 @@ export default function KanbanBoard() {
       return typedCard;
     } catch (err) {
       console.error("Failed to create card:", err);
-      toast.error("Failed to create card");
+      // Show user-friendly permission error messages
+      if (err instanceof Error) {
+        if (err.message.includes("Viewers do not have permission")) {
+          toast.error("You don't have permission to create tasks. Viewers can only view the board.");
+        } else {
+          toast.error(err.message);
+        }
+      } else {
+        toast.error("Failed to create card");
+      }
       return null;
     }
   };
@@ -176,7 +193,7 @@ export default function KanbanBoard() {
   ) => {
     try {
       // First update the UI optimistically
-      setLists((prevLists) => {
+    setLists((prevLists) => {
         const newLists = [...prevLists];
         const sourceListIndex = newLists.findIndex(
           (list) => list.id === sourceListId,
@@ -218,6 +235,21 @@ export default function KanbanBoard() {
     }
   };
 
+  // Helper function to sort cards by status
+  const sortCardsByStatus = (cards: CardItem[]): CardItem[] => {
+    const statusOrder = {
+      todo: 0,
+      "in-progress": 1,
+      completed: 2,
+    };
+
+    return [...cards].sort((a, b) => {
+      const statusA = a.status ?? "todo";
+      const statusB = b.status ?? "todo";
+      return statusOrder[statusA] - statusOrder[statusB];
+    });
+  };
+
   const handleUpdateCard = async (
     cardId: string,
     data: {
@@ -234,24 +266,49 @@ export default function KanbanBoard() {
         email?: string | null;
         imageUrl?: string | null;
       }>;
+      _shouldSort?: boolean; // Special flag to indicate sorting should happen
     },
   ) => {
     try {
+      // Create a copy of the data without the _shouldSort flag
+      const { _shouldSort, ...dataToUpdate } = data;
+
       // Update UI optimistically
-      setLists((prevLists) => {
-        return prevLists.map((list) => ({
-          ...list,
-          cards: list.cards.map((card) =>
-            card.id === cardId ? { ...card, ...data } : card,
-          ),
-        }));
+    setLists((prevLists) => {
+        const newLists = prevLists.map((list) => {
+          const updatedCards = list.cards.map((card) =>
+            card.id === cardId ? { ...card, ...dataToUpdate } : card,
+          );
+
+          // If the special flag is set, sort the cards by status
+          const sortedCards = _shouldSort
+            ? sortCardsByStatus(updatedCards)
+            : updatedCards;
+
+          return {
+            ...list,
+            cards: sortedCards,
+          };
+        });
+
+        return newLists;
       });
 
-      // Then update in the database
-      await updateCard(cardId, data);
+      // Then update in the database (without the _shouldSort flag)
+      await updateCard(cardId, dataToUpdate);
     } catch (err) {
       console.error("Failed to update card:", err);
-      toast.error("Failed to update card");
+      // Show user-friendly permission error messages
+      if (err instanceof Error) {
+        if (err.message.includes("Viewers do not have permission")) {
+          toast.error("You don't have permission to update tasks. Viewers can only view the board.");
+        } else {
+          toast.error(err.message);
+        }
+      } else {
+        toast.error("Failed to update card");
+      }
+      
       // Revert the optimistic update by refetching the lists
       if (activeBoard) {
         await refreshLists(activeBoard);
@@ -261,20 +318,30 @@ export default function KanbanBoard() {
 
   const handleDeleteCard = async (cardId: string) => {
     try {
-      // Update UI optimistically
-      setLists((prevLists) => {
-        return prevLists.map((list) => ({
+      // Optimistic UI update
+      setLists((prevLists) =>
+        prevLists.map((list) => ({
           ...list,
           cards: list.cards.filter((card) => card.id !== cardId),
-        }));
-      });
+        })),
+      );
 
-      // Then delete from the database
+      // Then delete from database
       await deleteCard(cardId);
     } catch (err) {
       console.error("Failed to delete card:", err);
-      toast.error("Failed to delete card");
-      // Revert the optimistic update by refetching the lists
+      // Show user-friendly permission error messages
+      if (err instanceof Error) {
+        if (err.message.includes("Viewers do not have permission")) {
+          toast.error("You don't have permission to delete tasks. Viewers can only view the board.");
+        } else {
+          toast.error(err.message);
+        }
+      } else {
+        toast.error("Failed to delete card");
+      }
+      
+      // Revert the optimistic update
       if (activeBoard) {
         await refreshLists(activeBoard);
       }
@@ -288,7 +355,12 @@ export default function KanbanBoard() {
       // Transform database board lists to our List type with validation
       const transformedLists: ListItem[] = boardLists
         .map(convertToListItem)
-        .filter((list): list is ListItem => list !== null);
+        .filter((list): list is ListItem => list !== null)
+        .map((list) => ({
+          ...list,
+          // Sort cards by status for consistency
+          cards: sortCardsByStatus(list.cards),
+        }));
 
       setLists(transformedLists);
     } catch (err) {
@@ -392,9 +464,9 @@ export default function KanbanBoard() {
         </div>
       ) : (
         <div className="flex h-full flex-1 space-x-4 overflow-x-auto p-4">
-          {lists.map((list) => (
+        {lists.map((list) => (
             <List
-              key={list.id}
+            key={list.id}
               id={list.id}
               title={list.title}
               cards={list.cards}
@@ -403,18 +475,18 @@ export default function KanbanBoard() {
               onMoveCard={handleMoveCard}
               onUpdateCard={handleUpdateCard}
               onDeleteCard={handleDeleteCard}
-            />
-          ))}
+          />
+        ))}
 
-          {showNewListInput ? (
+        {showNewListInput ? (
             <div className="bg-muted/20 flex h-fit w-72 shrink-0 flex-col rounded-md border p-2">
-              <Input
-                value={newListTitle}
-                onChange={(e) => setNewListTitle(e.target.value)}
-                placeholder="Enter list title..."
-                className="mb-2"
-                autoFocus
-              />
+            <Input
+              value={newListTitle}
+              onChange={(e) => setNewListTitle(e.target.value)}
+              placeholder="Enter list title..."
+              className="mb-2"
+              autoFocus
+            />
               <div className="flex space-x-2">
                 <Button
                   size="sm"
@@ -425,31 +497,31 @@ export default function KanbanBoard() {
                   }}
                   disabled={!newListTitle.trim()}
                 >
-                  Add List
-                </Button>
-                <Button
+                Add List
+              </Button>
+              <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => {
+                onClick={() => {
                     setShowNewListInput(false);
                     setNewListTitle("");
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
+                }}
+              >
+                Cancel
+              </Button>
             </div>
-          ) : (
-            <Button
+          </div>
+        ) : (
+          <Button
               variant="outline"
               className="text-muted-foreground h-fit w-72 justify-start border-dashed px-3 py-2"
-              onClick={() => setShowNewListInput(true)}
-            >
+            onClick={() => setShowNewListInput(true)}
+          >
               <PlusIcon className="mr-2 h-4 w-4" />
               Add List
-            </Button>
-          )}
-        </div>
+          </Button>
+        )}
+      </div>
       )}
     </div>
   );

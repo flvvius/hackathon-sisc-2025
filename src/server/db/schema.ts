@@ -41,6 +41,8 @@ export const users = createTable(
     name: d.varchar({ length: 256 }),
     email: d.varchar({ length: 256 }).unique(),
     imageUrl: d.varchar({ length: 512 }),
+    githubUsername: d.varchar({ length: 100 }),
+    gitlabUsername: d.varchar({ length: 100 }),
     createdAt: d
       .timestamp({ withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)

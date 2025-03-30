@@ -19,6 +19,8 @@ export interface BoardMember {
     name: string | null;
     email: string | null;
     imageUrl: string | null;
+    githubUsername: string | null;
+    gitlabUsername: string | null;
   };
   createdAt: Date;
   updatedAt: Date | null;
@@ -54,6 +56,8 @@ export async function getBoardMembers(boardId: string): Promise<BoardMember[]> {
             name: true,
             email: true,
             imageUrl: true,
+            githubUsername: true,
+            gitlabUsername: true,
           },
         },
       },
@@ -76,13 +80,37 @@ export async function addBoardMember(
     throw new Error("Board ID and user email are required");
   }
 
-  // Check if current user has permission
-  const hasPermission = await canManageBoardMembers(boardId);
-  if (!hasPermission) {
-    throw new Error("You don't have permission to add members to this board");
-  }
-
   try {
+    // Get the current user's role
+    const { userId } = await auth();
+    if (!userId) {
+      throw new Error("You must be logged in to add members");
+    }
+
+    const currentUserMember = await db.query.boardMembers.findFirst({
+      where: and(
+        eq(boardMembers.boardId, boardId),
+        eq(boardMembers.userId, userId),
+      ),
+    });
+
+    if (!currentUserMember) {
+      throw new Error("You are not a member of this board");
+    }
+
+    // Only owners and admins can add new members
+    if (
+      currentUserMember.role !== "owner" &&
+      currentUserMember.role !== "admin"
+    ) {
+      throw new Error("Only owners and admins can add members to the board");
+    }
+
+    // Only owners can add new owners
+    if (role === "owner" && currentUserMember.role !== "owner") {
+      throw new Error("Only owners can add other owners to the board");
+    }
+
     // Find the user by email
     const user = await db.query.users.findFirst({
       where: eq(users.email, userEmail),
@@ -123,6 +151,8 @@ export async function addBoardMember(
             name: true,
             email: true,
             imageUrl: true,
+            githubUsername: true,
+            gitlabUsername: true,
           },
         },
       },
@@ -131,7 +161,11 @@ export async function addBoardMember(
     return newMember as BoardMember;
   } catch (error) {
     console.error("Failed to add board member:", error);
-    throw error;
+    if (error instanceof Error) {
+      throw error;
+    } else {
+      throw new Error("Failed to add board member");
+    }
   }
 }
 
@@ -154,12 +188,49 @@ export async function updateBoardMemberRole(
       throw new Error("Board member not found");
     }
 
-    // Check if current user has permission
-    const hasPermission = await canManageBoardMembers(member.boardId);
-    if (!hasPermission) {
-      throw new Error(
-        "You don't have permission to update member roles on this board",
-      );
+    // Get the current user's role
+    const { userId } = await auth();
+    if (!userId) {
+      throw new Error("You must be logged in to update member roles");
+    }
+
+    const currentUserMember = await db.query.boardMembers.findFirst({
+      where: and(
+        eq(boardMembers.boardId, member.boardId),
+        eq(boardMembers.userId, userId),
+      ),
+    });
+
+    if (!currentUserMember) {
+      throw new Error("You are not a member of this board");
+    }
+
+    // Enhanced permission checks based on roles
+
+    // 1. Only owners can modify another owner's role
+    if (member.role === "owner" && currentUserMember.role !== "owner") {
+      throw new Error("Only owners can modify another owner's role");
+    }
+
+    // 2. Only owners can designate new owners
+    if (role === "owner" && currentUserMember.role !== "owner") {
+      throw new Error("Only owners can designate new owners");
+    }
+
+    // 3. Admins can only modify members and viewers
+    if (
+      currentUserMember.role === "admin" &&
+      (member.role === "owner" || member.role === "admin")
+    ) {
+      throw new Error("Admins can only modify members and viewers");
+    }
+
+    // 4. Members and viewers cannot modify roles
+    if (
+      currentUserMember.role === "member" ||
+      currentUserMember.role === "viewer"
+    ) {
+      throw new Error("You don't have permission to modify roles");
     }
 
     // Update the member's role
@@ -178,6 +249,8 @@ export async function updateBoardMemberRole(
             name: true,
             email: true,
             imageUrl: true,
+            githubUsername: true,
+            gitlabUsername: true,
           },
         },
       },
@@ -186,7 +259,11 @@ export async function updateBoardMemberRole(
     return updatedMember as BoardMember;
   } catch (error) {
     console.error("Failed to update board member:", error);
-    throw error;
+    if (error instanceof Error) {
+      throw error;
+    } else {
+      throw new Error("Failed to update board member");
+    }
   }
 }
 
@@ -206,12 +283,44 @@ export async function removeBoardMember(memberId: string): Promise<boolean> {
       throw new Error("Board member not found");
     }
 
-    // Check if current user has permission
-    const hasPermission = await canManageBoardMembers(member.boardId);
-    if (!hasPermission) {
-      throw new Error(
-        "You don't have permission to remove members from this board",
-      );
+    // Get the current user's role
+    const { userId } = await auth();
+    if (!userId) {
+      throw new Error("You must be logged in to remove members");
+    }
+
+    const currentUserMember = await db.query.boardMembers.findFirst({
+      where: and(
+        eq(boardMembers.boardId, member.boardId),
+        eq(boardMembers.userId, userId),
+      ),
+    });
+
+    if (!currentUserMember) {
+      throw new Error("You are not a member of this board");
+    }
+
+    // Permission rules:
+
+    // 1. Only owners can remove other owners
+    if (member.role === "owner" && currentUserMember.role !== "owner") {
+      throw new Error("Only owners can remove other owners");
+    }
+
+    // 2. Admins can only remove members and viewers
+    if (
+      currentUserMember.role === "admin" &&
+      (member.role === "owner" || member.role === "admin")
+    ) {
+      throw new Error("Admins can only remove members and viewers");
+    }
+
+    // 3. Members and viewers cannot remove anyone
+    if (
+      currentUserMember.role === "member" ||
+      currentUserMember.role === "viewer"
+    ) {
+      throw new Error("You don't have permission to remove board members");
     }
 
     // Check if the member being removed is the owner
@@ -235,6 +344,10 @@ export async function removeBoardMember(memberId: string): Promise<boolean> {
     return true;
   } catch (error) {
     console.error("Failed to remove board member:", error);
-    throw error;
+    if (error instanceof Error) {
+      throw error;
+    } else {
+      throw new Error("Failed to remove board member");
+    }
   }
 }

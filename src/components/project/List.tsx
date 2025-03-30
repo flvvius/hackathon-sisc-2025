@@ -41,6 +41,7 @@ interface ListProps {
       status?: string;
       assignees?: UserInfo[];
       labels?: Array<{ text: string; color: string }>;
+      _shouldSort?: boolean;
     },
   ) => Promise<void>;
   onDeleteCard: (cardId: string) => Promise<void>;
