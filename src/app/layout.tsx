@@ -23,7 +23,15 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      appearance={{
+        elements: {
+          userButtonBox: "dark:text-white",
+          userButtonOuterIdentifier: "dark:text-white",
+          userButtonAvatarBox: "dark:ring-gray-800",
+        },
+      }}
+    >
       <html lang="en" className={geist.variable} suppressHydrationWarning>
         <body
           className={cn(
@@ -33,12 +41,12 @@ export default function RootLayout({
         >
           <ThemeProvider
             attribute="class"
-            defaultTheme="system"
+            defaultTheme="dark"
             enableSystem
             disableTransitionOnChange
           >
             {children}
-            <Toaster position="top-right" />
+            <Toaster position="top-right" richColors />
           </ThemeProvider>
         </body>
       </html>

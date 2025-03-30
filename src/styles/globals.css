@@ -123,3 +123,17 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Dark mode fixes for Clerk components */
+.dark .cl-userButtonBox {
+  color: white !important;
+}
+
+.dark .cl-internal-b3fm6y {
+  color: white !important;
+}
+
+/* This ensures all clerk buttons with text have white text in dark mode */
+.dark .cl-rootBox .cl-button .cl-userPreview {
+  color: white !important;
+}

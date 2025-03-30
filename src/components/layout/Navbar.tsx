@@ -18,24 +18,26 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <nav className="bg-background border-b">
+    <nav className="bg-background border-border border-b">
       <div className="flex h-16 items-center px-4 sm:px-6 lg:px-8">
         <div className="flex items-center">
           <Link href="/" className="flex items-center">
-            <span className="text-xl font-bold">Track Thor</span>
+            <span className="text-foreground text-xl font-bold">
+              Track Thor
+            </span>
           </Link>
         </div>
 
         <div className="hidden md:ml-8 md:flex md:items-center md:space-x-4">
           <Link
             href="/"
-            className="hover:text-primary text-sm font-medium transition-colors"
+            className="text-foreground/80 hover:text-primary text-sm font-medium transition-colors"
           >
             Home
           </Link>
           <Link
             href="/dashboard"
-            className="hover:text-primary text-sm font-medium transition-colors"
+            className="text-foreground/80 hover:text-primary text-sm font-medium transition-colors"
           >
             Boards
           </Link>
@@ -84,21 +86,21 @@ export default function Navbar() {
               <div className="grid gap-4 py-4">
                 <Link
                   href="/"
-                  className="block px-2 py-1 text-lg"
+                  className="text-foreground hover:text-primary block px-2 py-1 text-lg transition-colors"
                   onClick={() => setIsOpen(false)}
                 >
                   Home
                 </Link>
                 <Link
                   href="/dashboard"
-                  className="block px-2 py-1 text-lg"
+                  className="text-foreground hover:text-primary block px-2 py-1 text-lg transition-colors"
                   onClick={() => setIsOpen(false)}
                 >
                   Boards
                 </Link>
                 <div className="flex items-center gap-2 px-2 py-1">
                   <ThemeToggle />
-                  <span className="text-lg">Theme</span>
+                  <span className="text-foreground text-lg">Theme</span>
                 </div>
               </div>
             </SheetContent>

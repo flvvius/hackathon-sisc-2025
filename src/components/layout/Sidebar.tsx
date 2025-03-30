@@ -42,15 +42,15 @@ export default function Sidebar({ className }: SidebarProps) {
   const DesktopSidebar = (
     <div
       className={cn(
-        "fixed inset-y-0 z-30 flex flex-col border-r bg-white transition-all duration-300",
+        "border-border dark:bg-sidebar fixed inset-y-0 z-30 flex flex-col border-r bg-white transition-all duration-300",
         isOpen ? "w-64" : "w-[70px]",
         className,
       )}
     >
-      <div className="flex h-16 items-center justify-between border-b px-4">
+      <div className="border-border flex h-16 items-center justify-between border-b px-4">
         <Link
           href="/"
-          className="flex items-center gap-2 text-xl font-bold text-purple-700"
+          className="flex items-center gap-2 text-xl font-bold text-purple-700 dark:text-purple-400"
         >
           <KanbanSquare className="h-6 w-6 flex-shrink-0" />
           {isOpen && <span>Track Thor</span>}
@@ -82,8 +82,8 @@ export default function Sidebar({ className }: SidebarProps) {
                       className={cn(
                         "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                         pathname === item.href
-                          ? "bg-purple-50 text-purple-700"
-                          : "text-gray-700 hover:bg-gray-100",
+                          ? "bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
+                          : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800/40",
                       )}
                     >
                       <item.icon className="h-5 w-5 flex-shrink-0" />
@@ -102,7 +102,7 @@ export default function Sidebar({ className }: SidebarProps) {
 
       <div
         className={cn(
-          "flex items-center border-t p-4",
+          "border-border flex items-center border-t p-4",
           isOpen ? "justify-between" : "justify-center",
         )}
       >
@@ -140,10 +140,10 @@ export default function Sidebar({ className }: SidebarProps) {
   const MobileSidebar = (
     <Sheet open={isMobileOpen} onOpenChange={setIsMobileOpen}>
       <SheetContent side="left" className="w-[280px] p-0">
-        <div className="flex h-16 items-center border-b px-6">
+        <div className="border-border flex h-16 items-center border-b px-6">
           <Link
             href="/"
-            className="flex items-center gap-2 text-xl font-bold text-purple-700"
+            className="flex items-center gap-2 text-xl font-bold text-purple-700 dark:text-purple-400"
           >
             <KanbanSquare className="h-6 w-6" />
             <span>Track Thor</span>
@@ -158,8 +158,8 @@ export default function Sidebar({ className }: SidebarProps) {
                   className={cn(
                     "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                     pathname === item.href
-                      ? "bg-purple-50 text-purple-700"
-                      : "text-gray-700 hover:bg-gray-100",
+                      ? "bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
+                      : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800/40",
                   )}
                   onClick={() => setIsMobileOpen(false)}
                 >
@@ -170,7 +170,7 @@ export default function Sidebar({ className }: SidebarProps) {
             ))}
           </ul>
         </nav>
-        <div className="flex items-center justify-between border-t p-4">
+        <div className="border-border flex items-center justify-between border-t p-4">
           <UserButton showName={true} />
           <ThemeToggle size="sm" />
         </div>
