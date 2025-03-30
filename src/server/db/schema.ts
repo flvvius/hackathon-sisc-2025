@@ -90,10 +90,7 @@ export const boardMembers = createTable(
       .notNull(),
     updatedAt: d.timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
   }),
-  (t) => [
-    index("board_member_idx").on(t.boardId, t.userId),
-    index("board_member_user_idx").on(t.userId),
-  ],
+  (t) => [index("board_member_idx").on(t.boardId, t.userId)],
 );
 
 // Lists table
@@ -125,6 +122,9 @@ export const cards = createTable(
     description: d.text(),
     position: d.integer().default(0).notNull(),
     type: d.varchar({ length: 32 }).default("project").notNull(),
+    status: taskStatusEnum("status").default("todo"),
+    labels: d.json(),
+    assignees: d.json(),
     listId: d
       .uuid()
       .notNull()

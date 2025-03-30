@@ -157,6 +157,16 @@ export async function createCard(
   title: string,
   description?: string,
   type: "project" | "comment" = "project",
+  labels?: Array<{
+    text: string;
+    color: string;
+  }>,
+  assignees?: Array<{
+    id: string;
+    name?: string | null;
+    email?: string | null;
+    imageUrl?: string | null;
+  }>,
 ) {
   if (!listId || !title.trim()) {
     throw new Error("List ID and card title are required");
@@ -165,6 +175,21 @@ export async function createCard(
   try {
     const cardId = uuidv4();
 
+    // Filter and clean up labels if provided
+    const validatedLabels = labels
+      ? labels
+          .filter((label) => label.text?.trim() && label.color)
+          .map((label) => ({
+            text: label.text.trim(),
+            color: label.color,
+          }))
+      : undefined;
+
+    // Filter and clean up assignees if provided
+    const validatedAssignees = assignees
+      ? assignees.filter((assignee) => assignee.id)
+      : undefined;
+
     await db.insert(cards).values({
       id: cardId,
       title,
@@ -172,6 +197,8 @@ export async function createCard(
       type,
       listId,
       position: await getNextCardPosition(listId),
+      labels: validatedLabels,
+      assignees: validatedAssignees,
     });
 
     return await db.query.cards.findFirst({
@@ -223,6 +250,17 @@ export async function updateCard(
   data: {
     title?: string;
     description?: string | null;
+    status?: "todo" | "in-progress" | "completed";
+    labels?: Array<{
+      text: string;
+      color: string;
+    }>;
+    assignees?: Array<{
+      id: string;
+      name?: string | null;
+      email?: string | null;
+      imageUrl?: string | null;
+    }>;
   },
 ) {
   if (!cardId) {
@@ -230,6 +268,23 @@ export async function updateCard(
   }
 
   try {
+    // If labels are provided, ensure they're valid
+    if (data.labels) {
+      // Validate each label has text and color
+      data.labels = data.labels
+        .filter((label) => label.text?.trim() && label.color)
+        .map((label) => ({
+          text: label.text.trim(),
+          color: label.color,
+        }));
+    }
+
+    // If assignees are provided, ensure they're valid
+    if (data.assignees) {
+      // Validate each assignee has an id
+      data.assignees = data.assignees.filter((assignee) => assignee.id);
+    }
+
     await db.update(cards).set(data).where(eq(cards.id, cardId));
 
     return await db.query.cards.findFirst({

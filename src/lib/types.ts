@@ -1,5 +1,13 @@
 // Common types used throughout the application
 
+// User type for assignees
+export interface UserInfo {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  imageUrl?: string | null;
+}
+
 // Frontend types (fully typed with required properties)
 export interface CardItem {
   id: string;
@@ -7,7 +15,13 @@ export interface CardItem {
   description: string | null;
   position: number;
   listId: string;
-  type: "project" | "comment";
+  type?: "project" | "comment" | "task";
+  status?: "todo" | "in-progress" | "completed";
+  labels?: Array<{
+    text: string;
+    color: string;
+  }>;
+  assignees?: UserInfo[];
 }
 
 export interface ListItem {
@@ -30,9 +44,16 @@ export interface DbCard {
   id: string;
   title: string;
   description: string | null;
-  position: number | null;
+  position: number;
   listId: string;
-  type?: string;
+  type?: "project" | "comment" | "task";
+  status?: "todo" | "in-progress" | "completed";
+  labels?: Array<{
+    text: string;
+    color: string;
+  }>;
+  assignees?: Array<UserInfo>;
+  boardId?: string;
   author?: string | null;
   createdAt?: Date;
   updatedAt?: Date | null;

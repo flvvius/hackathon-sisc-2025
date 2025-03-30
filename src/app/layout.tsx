@@ -4,7 +4,6 @@ import { type Metadata } from "next";
 import { Geist } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "sonner";
-import { ThemeProvider } from "~/components/ui/theme-provider";
 import { cn } from "~/lib/utils";
 
 export const metadata: Metadata = {
@@ -31,14 +30,7 @@ export default function RootLayout({
             geist.variable,
           )}
         >
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem
-            disableTransitionOnChange
-          >
-            {children}
-          </ThemeProvider>
+          {children}
           <Toaster position="top-right" />
         </body>
       </html>

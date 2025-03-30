@@ -1,15 +1,19 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useDrag } from "react-dnd";
 import {
-  type Card,
-  type Task,
-  type Contributor,
-  type Comment,
-  labelColors,
-} from "./KanbanBoard";
+  CheckCircle2,
+  Clock,
+  Circle,
+  MessageSquare,
+  Pencil,
+  Trash2,
+  UserCircle,
+} from "lucide-react";
 import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
+import { Textarea } from "~/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -17,45 +21,72 @@ import {
   DialogTitle,
   DialogFooter,
 } from "~/components/ui/dialog";
-import {
-  Trash2,
-  CheckCircle2,
-  Circle,
-  Clock,
-  MessageSquare,
-} from "lucide-react";
-import { Avatar, AvatarFallback } from "~/components/ui/avatar";
-import { Badge } from "~/components/ui/badge";
-import { Progress } from "~/components/ui/progress";
-import ProjectCardDialog from "./ProjectCardDialog";
+import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
+import TaskLabelPicker from "~/components/project/TaskLabelPicker";
+import TaskAssignees from "~/components/project/TaskAssignees";
+import { BoardMembersProvider } from "~/hooks/useBoardMembers";
+import type { CardItem, UserInfo } from "~/lib/types";
+
+// Define label colors with fixed types
+const labelColors = [
+  { name: "green", bg: "bg-green-100", text: "text-green-700" },
+  { name: "red", bg: "bg-red-100", text: "text-red-700" },
+  { name: "blue", bg: "bg-blue-100", text: "text-blue-700" },
+  { name: "yellow", bg: "bg-yellow-100", text: "text-yellow-700" },
+  { name: "purple", bg: "bg-purple-100", text: "text-purple-700" },
+  { name: "pink", bg: "bg-pink-100", text: "text-pink-700" },
+  { name: "indigo", bg: "bg-indigo-100", text: "text-indigo-700" },
+  { name: "gray", bg: "bg-gray-100", text: "text-gray-700" },
+] as const;
+
+// Helper function to get color config
+function getColorConfig(colorName: string | undefined) {
+  // Default to gray (the last color)
+  const defaultColor = labelColors[7];
+
+  if (!colorName) return defaultColor;
+
+  // Find matching color or use default
+  return labelColors.find((c) => c.name === colorName) ?? defaultColor;
+}
+
+// Helper to get initials from name
+const getInitials = (name: string | null | undefined) => {
+  if (!name) return "?";
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .substring(0, 2);
+};
 
 interface KanbanCardProps {
-  card: Card;
+  card: CardItem;
   listId: string;
-  updateCard: (updatedCard: Omit<Card, "id">) => void;
+  boardId: string;
+  updateCard: (cardId: string, data: Partial<CardItem>) => void;
   deleteCard: () => void;
-  addTask: (task: Omit<Task, "id">) => void;
-  updateTask: (taskId: string, updatedTask: Omit<Task, "id">) => void;
-  deleteTask: (taskId: string) => void;
-  addContributor: (contributor: Omit<Contributor, "id">) => void;
-  addComment: (comment: Omit<Comment, "id" | "createdAt">) => void;
 }
 
 export default function KanbanCard({
   card,
   listId,
+  boardId,
   updateCard,
   deleteCard,
-  addTask,
-  updateTask,
-  deleteTask,
-  addContributor,
-  addComment,
 }: KanbanCardProps) {
+  // Local dialog state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isTasksOpen, setIsTasksOpen] = useState(false);
-  const [isContributorsOpen, setIsContributorsOpen] = useState(false);
-  const [isCommentsOpen, setIsCommentsOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState(card.title);
+  const [editDescription, setEditDescription] = useState(
+    card.description ?? "",
+  );
+  const [editStatus, setEditStatus] = useState(card.status ?? "todo");
+  const [editLabels, setEditLabels] = useState(card.labels ?? []);
+  const [editAssignees, setEditAssignees] = useState<UserInfo[]>(
+    card.assignees ?? [],
+  );
 
   // Create a ref for the drag element
   const cardRef = useRef<HTMLDivElement>(null);
@@ -72,174 +103,72 @@ export default function KanbanCard({
   // Connect the drag ref
   connectDrag(cardRef);
 
-  // Calculate task completion percentage
-  const getTaskCompletionPercentage = () => {
-    if (!card.tasks || card.tasks.length === 0) return 0;
-    const completedTasks = card.tasks.filter(
-      (task) => task.status === "completed",
-    );
-    return Math.round((completedTasks.length / card.tasks.length) * 100);
+  // Handle opening the dialog - reset form values
+  const handleOpenDialog = () => {
+    setEditTitle(card.title);
+    setEditDescription(card.description ?? "");
+    setEditStatus(card.status ?? "todo");
+    setEditLabels(card.labels ?? []);
+    setEditAssignees(card.assignees ?? []);
+    setIsDialogOpen(true);
   };
 
-  // Render different card content based on card type
-  const renderCardContent = () => {
-    switch (card.type) {
-      case "project":
-        return (
-          <>
-            {card.labels && card.labels.length > 0 && (
-              <div className="mb-2 flex flex-wrap gap-1">
-                {card.labels.map((label, index) => {
-                  const colorConfig =
-                    labelColors.find((c) => c.name === label.color) ??
-                    labelColors[7]; // Default to gray
-                  return (
-                    <span
-                      key={index}
-                      className={`${colorConfig?.bg} ${colorConfig?.text} rounded-full px-2 py-0.5 text-xs`}
-                    >
-                      {label.text}
-                    </span>
-                  );
-                })}
-              </div>
-            )}
-            <h4 className="text-sm font-medium">{card.title}</h4>
-            {card.description && (
-              <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">
-                {card.description}
-              </p>
-            )}
+  // Handle saving the dialog changes
+  const handleSaveChanges = () => {
+    if (!editTitle.trim()) return;
 
-            <div className="mt-3 space-y-2">
-              {/* Task progress */}
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-1">
-                  <CheckCircle2 className="text-muted-foreground h-3.5 w-3.5" />
-                  <span>Tasks</span>
-                </div>
-                <span className="text-muted-foreground">
-                  {card.tasks
-                    ? `${card.tasks.filter((t) => t.status === "completed").length}/${card.tasks.length}`
-                    : "0/0"}
-                </span>
-              </div>
-              <Progress
-                value={getTaskCompletionPercentage()}
-                className="h-1.5"
-              />
+    updateCard(card.id, {
+      title: editTitle,
+      description: editDescription,
+      status: editStatus,
+      labels: editLabels,
+      assignees: editAssignees,
+    });
 
-              {/* Contributors */}
-              {card.contributors && card.contributors.length > 0 && (
-                <div className="mt-2 flex -space-x-2 overflow-hidden">
-                  {card.contributors.slice(0, 3).map((contributor, index) => (
-                    <Avatar
-                      key={index}
-                      className="border-background h-6 w-6 border-2"
-                    >
-                      <AvatarFallback className="bg-purple-100 text-[10px] text-purple-700">
-                        {contributor.name.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                  ))}
-                  {card.contributors.length > 3 && (
-                    <div className="border-background bg-muted flex h-6 w-6 items-center justify-center rounded-full border-2 text-[10px]">
-                      +{card.contributors.length - 3}
-                    </div>
-                  )}
-                </div>
-              )}
+    setIsDialogOpen(false);
+  };
 
-              {/* Comments count */}
-              {card.comments && card.comments.length > 0 && (
-                <div className="text-muted-foreground mt-2 flex items-center text-xs">
-                  <MessageSquare className="mr-1 h-3.5 w-3.5" />
-                  {card.comments.length} comment
-                  {card.comments.length !== 1 ? "s" : ""}
-                </div>
-              )}
-            </div>
-          </>
-        );
+  // Handle deleting the card
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    deleteCard();
+  };
 
-      case "task":
-        return (
-          <>
-            {card.labels && card.labels.length > 0 && (
-              <div className="mb-2 flex flex-wrap gap-1">
-                {card.labels.map((label, index) => {
-                  const colorConfig =
-                    labelColors.find((c) => c.name === label.color) ??
-                    labelColors[7];
-                  return (
-                    <span
-                      key={index}
-                      className={`${colorConfig?.bg} ${colorConfig?.text} rounded-full px-2 py-0.5 text-xs`}
-                    >
-                      {label.text}
-                    </span>
-                  );
-                })}
-              </div>
-            )}
-            <div className="flex items-center gap-1.5">
-              {card.status === "completed" ? (
-                <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-green-500" />
-              ) : card.status === "in-progress" ? (
-                <Clock className="h-4 w-4 flex-shrink-0 text-blue-500" />
-              ) : (
-                <Circle className="text-muted-foreground h-4 w-4 flex-shrink-0" />
-              )}
-              <h4 className="text-sm font-medium">{card.title}</h4>
-            </div>
-            {card.description && (
-              <p className="text-muted-foreground mt-1 ml-5.5 line-clamp-2 text-xs">
-                {card.description}
-              </p>
-            )}
+  // Toggle status without opening dialog
+  const handleStatusToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
 
-            {card.assignees && card.assignees.length > 0 && (
-              <div className="mt-2 ml-5.5 flex -space-x-2 overflow-hidden">
-                {card.assignees.map((assignee, index) => (
-                  <Avatar
-                    key={index}
-                    className="border-background h-5 w-5 border-2"
-                  >
-                    <AvatarFallback className="bg-purple-100 text-[8px] text-purple-700">
-                      {assignee.name.substring(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                ))}
-              </div>
-            )}
-          </>
-        );
+    const currentStatus = card.status ?? "todo";
+    let newStatus: "todo" | "in-progress" | "completed";
 
-      case "comment":
-        return (
-          <div className="space-y-1">
-            <div className="flex items-center gap-1">
-              <MessageSquare className="h-3.5 w-3.5 text-blue-500" />
-              <h4 className="text-sm font-medium">{card.author}</h4>
-              {card.createdAt && (
-                <span className="text-muted-foreground text-xs">
-                  {new Date(card.createdAt).toLocaleDateString()}
-                </span>
-              )}
-            </div>
-            <p className="text-xs">{card.description}</p>
-          </div>
-        );
-
+    switch (currentStatus) {
+      case "todo":
+        newStatus = "in-progress";
+        break;
+      case "in-progress":
+        newStatus = "completed";
+        break;
+      case "completed":
+        newStatus = "todo";
+        break;
       default:
-        return (
-          <>
-            <h4 className="text-sm font-medium">{card.title}</h4>
-            <p className="text-muted-foreground mt-1 text-xs">
-              {card.description}
-            </p>
-          </>
-        );
+        newStatus = "todo";
+    }
+
+    // Update the card directly
+    updateCard(card.id, { status: newStatus });
+  };
+
+  // Status icon based on current status
+  const StatusIcon = () => {
+    const currentStatus = card.status ?? "todo";
+    switch (currentStatus) {
+      case "completed":
+        return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+      case "in-progress":
+        return <Clock className="h-4 w-4 text-blue-500" />;
+      default:
+        return <Circle className="h-4 w-4 text-gray-400" />;
     }
   };
 
@@ -247,113 +176,181 @@ export default function KanbanCard({
     <>
       <div
         ref={cardRef}
-        className={`cursor-pointer rounded-lg border bg-white p-3 shadow-sm transition-all duration-200 hover:shadow ${
+        className={`rounded-lg border bg-white p-3 shadow-sm transition-all duration-200 hover:shadow ${
           isDragging ? "rotate-1 opacity-50" : ""
         }`}
-        onClick={() => setIsDialogOpen(true)}
       >
-        {renderCardContent()}
-      </div>
-
-      {card.type === "project" && (
-        <ProjectCardDialog
-          open={isDialogOpen}
-          onOpenChange={setIsDialogOpen}
-          card={card}
-          onUpdate={updateCard}
-          onDelete={deleteCard}
-          onAddTask={addTask}
-          onUpdateTask={updateTask}
-          onDeleteTask={deleteTask}
-          onAddContributor={addContributor}
-          onAddComment={addComment}
-        />
-      )}
-
-      {card.type !== "project" && (
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>{card.title}</DialogTitle>
-            </DialogHeader>
-
-            <div className="grid gap-4 py-2">
-              <p className="text-sm">{card.description}</p>
-
-              {card.type === "task" && (
-                <>
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant={
-                        card.status === "completed" ? "default" : "outline"
-                      }
-                    >
-                      {card.status === "completed"
-                        ? "Completed"
-                        : card.status === "in-progress"
-                          ? "In Progress"
-                          : "To Do"}
-                    </Badge>
-
-                    {card.dueDate && (
-                      <Badge
-                        variant="outline"
-                        className="flex items-center gap-1"
-                      >
-                        <Clock className="h-3 w-3" />
-                        Due {new Date(card.dueDate).toLocaleDateString()}
-                      </Badge>
-                    )}
-                  </div>
-
-                  {card.assignees && card.assignees.length > 0 && (
-                    <div className="space-y-1">
-                      <h4 className="text-sm font-medium">Assignees</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {card.assignees.map((assignee, index) => (
-                          <div
-                            key={index}
-                            className="bg-muted flex items-center gap-2 rounded-md p-1.5"
-                          >
-                            <Avatar className="h-6 w-6">
-                              <AvatarFallback className="bg-purple-100 text-[10px] text-purple-700">
-                                {assignee.name.substring(0, 2).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="text-xs font-medium">
-                                {assignee.name}
-                              </p>
-                              <p className="text-muted-foreground text-xs">
-                                {assignee.role}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </>
+        <div className="flex items-start justify-between">
+          <div className="flex items-start gap-2">
+            <button
+              onClick={handleStatusToggle}
+              className="hover:bg-muted/50 mt-0.5 rounded-full p-1"
+              title={`Status: ${card.status ?? "todo"}`}
+            >
+              <StatusIcon />
+            </button>
+            <div>
+              <h4 className="text-sm font-medium">{card.title}</h4>
+              {card.description && (
+                <p className="text-muted-foreground mt-1 ml-1 line-clamp-2 text-xs">
+                  {card.description}
+                </p>
               )}
             </div>
+          </div>
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0"
+              onClick={handleOpenDialog}
+              title="Edit task"
+            >
+              <Pencil className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-destructive h-6 w-6 p-0"
+              onClick={handleDelete}
+              title="Delete task"
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
 
-            <DialogFooter className="flex justify-between sm:justify-between">
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => {
-                  deleteCard();
-                  setIsDialogOpen(false);
-                }}
-                className="mr-auto"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
+        <div className="mt-2 flex flex-col gap-2">
+          {/* Labels */}
+          {card.labels && card.labels.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {card.labels.map((label, index) => {
+                const colorConfig = getColorConfig(label.color);
+                return (
+                  <span
+                    key={index}
+                    className={`${colorConfig.bg} ${colorConfig.text} rounded-full px-2 py-0.5 text-xs`}
+                  >
+                    {label.text}
+                  </span>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Assignees */}
+          {card.assignees && card.assignees.length > 0 && (
+            <div className="flex items-center gap-1">
+              <UserCircle className="text-muted-foreground h-3.5 w-3.5" />
+              <div className="flex -space-x-2">
+                {card.assignees.slice(0, 3).map((assignee) => (
+                  <Avatar
+                    key={assignee.id}
+                    className="border-background h-5 w-5 border"
+                  >
+                    <AvatarImage
+                      src={assignee.imageUrl ?? undefined}
+                      alt={assignee.name ?? "User"}
+                    />
+                    <AvatarFallback className="text-[8px]">
+                      {getInitials(assignee.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                ))}
+                {card.assignees.length > 3 && (
+                  <div className="border-background bg-muted flex h-5 w-5 items-center justify-center rounded-full border text-[8px] font-medium">
+                    +{card.assignees.length - 3}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Task</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="title" className="text-sm font-medium">
+                Title
+              </label>
+              <Input
+                id="title"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                placeholder="Task title"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="description" className="text-sm font-medium">
+                Description
+              </label>
+              <Textarea
+                id="description"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                placeholder="Task description (optional)"
+                rows={3}
+              />
+            </div>
+
+            <TaskLabelPicker
+              labels={editLabels}
+              onLabelsChange={setEditLabels}
+            />
+
+            <BoardMembersProvider boardId={boardId}>
+              <TaskAssignees
+                boardId={boardId}
+                assignees={editAssignees}
+                onChange={setEditAssignees}
+              />
+            </BoardMembersProvider>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Status</label>
+              <div className="flex space-x-2">
+                <Button
+                  variant={editStatus === "todo" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setEditStatus("todo")}
+                >
+                  <Circle className="mr-1 h-4 w-4" /> To Do
+                </Button>
+                <Button
+                  variant={editStatus === "in-progress" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setEditStatus("in-progress")}
+                >
+                  <Clock className="mr-1 h-4 w-4" /> In Progress
+                </Button>
+                <Button
+                  variant={editStatus === "completed" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setEditStatus("completed")}
+                >
+                  <CheckCircle2 className="mr-1 h-4 w-4" /> Completed
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveChanges} disabled={!editTitle.trim()}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

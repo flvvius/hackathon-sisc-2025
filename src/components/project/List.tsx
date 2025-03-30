@@ -2,27 +2,31 @@
 
 import { useState, useRef } from "react";
 import { useDrop } from "react-dnd";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-} from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
-import { MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
-import type { CardItem } from "~/lib/types";
-import { CardComponent } from "./CardComponent";
+import KanbanCard from "~/components/layout/KanbanCard";
+import { MoreHorizontal, Plus, X } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
+import TaskAssignees from "~/components/project/TaskAssignees";
+import { BoardMembersProvider } from "~/hooks/useBoardMembers";
+import type { CardItem, UserInfo } from "~/lib/types";
 
 interface ListProps {
   id: string;
   title: string;
   cards: CardItem[];
+  boardId: string;
   onCreateCard: (
     listId: string,
     title: string,
     description?: string,
+    assignees?: UserInfo[],
   ) => Promise<CardItem | null>;
   onMoveCard: (
     cardId: string,
@@ -31,7 +35,13 @@ interface ListProps {
   ) => Promise<void>;
   onUpdateCard: (
     cardId: string,
-    data: { title?: string; description?: string | null },
+    data: {
+      title?: string;
+      description?: string | null;
+      status?: string;
+      assignees?: UserInfo[];
+      labels?: Array<{ text: string; color: string }>;
+    },
   ) => Promise<void>;
   onDeleteCard: (cardId: string) => Promise<void>;
 }
@@ -40,20 +50,19 @@ export default function List({
   id,
   title,
   cards,
+  boardId,
   onCreateCard,
   onMoveCard,
   onUpdateCard,
   onDeleteCard,
 }: ListProps) {
-  const [showNewCardForm, setShowNewCardForm] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
   const [newCardTitle, setNewCardTitle] = useState("");
   const [newCardDescription, setNewCardDescription] = useState("");
-  const [isCreatingCard, setIsCreatingCard] = useState(false);
-
-  // Create a ref for the drop target
+  const [newCardAssignees, setNewCardAssignees] = useState<UserInfo[]>([]);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Set up drop target for cards
+  // Set up drop target
   const [{ isOver }, drop] = useDrop({
     accept: "CARD",
     drop: (item: { id: string; listId: string }) => {
@@ -66,96 +75,121 @@ export default function List({
     }),
   });
 
-  // Connect the drop ref
+  // Connect the drop ref to the DOM element
   drop(listRef);
 
   const handleCreateCard = async () => {
-    if (!newCardTitle.trim()) return;
-
-    setIsCreatingCard(true);
-    try {
-      await onCreateCard(id, newCardTitle, newCardDescription || undefined);
-      setNewCardTitle("");
-      setNewCardDescription("");
-      setShowNewCardForm(false);
-    } catch (error) {
-      console.error("Failed to create card:", error);
-    } finally {
-      setIsCreatingCard(false);
+    if (newCardTitle.trim()) {
+      const newCard = await onCreateCard(
+        id,
+        newCardTitle,
+        newCardDescription || undefined,
+        newCardAssignees.length > 0 ? newCardAssignees : undefined,
+      );
+      if (newCard) {
+        resetForm();
+      }
     }
+  };
+
+  const resetForm = () => {
+    setNewCardTitle("");
+    setNewCardDescription("");
+    setNewCardAssignees([]);
+    setShowAddForm(false);
   };
 
   return (
     <div
       ref={listRef}
-      className={`bg-muted/20 flex h-full w-72 shrink-0 flex-col rounded-md border p-2 ${
-        isOver ? "border-blue-500 bg-blue-50/50" : ""
+      className={`bg-muted/20 flex h-full w-72 shrink-0 flex-col rounded-md border ${
+        isOver ? "border-blue-500" : ""
       }`}
     >
-      <div className="mb-3 flex items-center justify-between">
+      <div className="flex items-center justify-between border-b p-2">
         <h3 className="text-sm font-medium">{title}</h3>
-        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onSelect={() => alert("Rename list not implemented")}
+            >
+              Rename List
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={() => alert("Delete list not implemented")}
+            >
+              Delete List
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      <div className="flex-1 space-y-2 overflow-y-auto">
+      <div className="flex flex-1 flex-col gap-2 overflow-y-auto p-2">
         {cards.map((card) => (
-          <CardComponent
+          <KanbanCard
             key={card.id}
             card={card}
             listId={id}
-            onDeleteCard={onDeleteCard}
+            boardId={boardId}
+            updateCard={(cardId, data) => {
+              void onUpdateCard(cardId, data);
+            }}
+            deleteCard={() => void onDeleteCard(card.id)}
           />
         ))}
-      </div>
 
-      {showNewCardForm ? (
-        <div className="mt-2 space-y-2">
-          <Input
-            placeholder="Card title"
-            value={newCardTitle}
-            onChange={(e) => setNewCardTitle(e.target.value)}
-            className="text-sm"
-            autoFocus
-          />
-          <Textarea
-            placeholder="Description (optional)"
-            value={newCardDescription}
-            onChange={(e) => setNewCardDescription(e.target.value)}
-            className="min-h-[80px] text-sm"
-          />
-          <div className="flex space-x-2">
-            <Button
-              size="sm"
-              onClick={handleCreateCard}
-              disabled={!newCardTitle.trim() || isCreatingCard}
-            >
-              {isCreatingCard ? "Adding..." : "Add"}
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                setShowNewCardForm(false);
-                setNewCardTitle("");
-                setNewCardDescription("");
-              }}
-            >
-              Cancel
-            </Button>
+        {showAddForm ? (
+          <div className="bg-background rounded-md border p-2 shadow-sm">
+            <Input
+              value={newCardTitle}
+              onChange={(e) => setNewCardTitle(e.target.value)}
+              placeholder="Task title"
+              className="mb-2"
+              autoFocus
+            />
+            <Textarea
+              value={newCardDescription}
+              onChange={(e) => setNewCardDescription(e.target.value)}
+              placeholder="Description (optional)"
+              className="mb-2 min-h-[60px] resize-none"
+            />
+            <BoardMembersProvider boardId={boardId}>
+              <TaskAssignees
+                boardId={boardId}
+                assignees={newCardAssignees}
+                onChange={setNewCardAssignees}
+              />
+            </BoardMembersProvider>
+            <div className="mt-3 flex space-x-2">
+              <Button
+                size="sm"
+                onClick={handleCreateCard}
+                disabled={!newCardTitle.trim()}
+              >
+                Add Task
+              </Button>
+              <Button size="sm" variant="ghost" onClick={resetForm}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        </div>
-      ) : (
-        <Button
-          variant="ghost"
-          className="text-muted-foreground mt-2 justify-start"
-          onClick={() => setShowNewCardForm(true)}
-        >
-          <Plus className="mr-1 h-4 w-4" />
-          <span className="text-sm">Add a card</span>
-        </Button>
-      )}
+        ) : (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground justify-start"
+            onClick={() => setShowAddForm(true)}
+          >
+            <Plus className="mr-1 h-4 w-4" />
+            Add a task
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

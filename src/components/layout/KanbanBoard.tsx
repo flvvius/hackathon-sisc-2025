@@ -7,6 +7,7 @@ import { Input } from "~/components/ui/input";
 import List from "~/components/project/List";
 import BoardSelector from "~/components/project/BoardSelector";
 import BoardSettings from "~/components/project/BoardSettings";
+import NewBoardDialog from "~/components/project/NewBoardDialog";
 import { useBoards } from "~/hooks/useBoards";
 import {
   getBoardLists,
@@ -18,6 +19,7 @@ import {
 } from "~/server/actions/boards";
 import { toast } from "sonner";
 import type { CardItem, ListItem, DbList, DbCard } from "~/lib/types";
+import { Select } from "~/components/ui/select";
 
 export default function KanbanBoard() {
   const {
@@ -32,6 +34,7 @@ export default function KanbanBoard() {
   const [isLoadingLists, setIsLoadingLists] = useState(false);
   const [newListTitle, setNewListTitle] = useState("");
   const [showNewListInput, setShowNewListInput] = useState(false);
+  const [isNewBoardDialogOpen, setIsNewBoardDialogOpen] = useState(false);
 
   // Find the active board object
   const currentBoard = boards?.find((board) => board.id === activeBoard);
@@ -55,9 +58,10 @@ export default function KanbanBoard() {
       description: dbCard.description,
       position: dbCard.position ?? 0,
       listId: dbCard.listId,
-      type: (dbCard.type === "comment" ? "comment" : "project") as
-        | "project"
-        | "comment",
+      status: dbCard.status as "todo" | "in-progress" | "completed" | undefined,
+      type: dbCard.type === "comment" ? "comment" : "project",
+      labels: dbCard.labels,
+      assignees: dbCard.assignees,
     };
   };
 
@@ -118,9 +122,21 @@ export default function KanbanBoard() {
     listId: string,
     title: string,
     description?: string,
+    assignees?: Array<{
+      id: string;
+      name?: string | null;
+      email?: string | null;
+      imageUrl?: string | null;
+    }>,
   ) => {
     try {
-      const newCard = await createCard(listId, title, description);
+      const newCard = await createCard(
+        listId,
+        title,
+        description,
+        undefined,
+        assignees,
+      );
       if (!newCard) {
         toast.error("Failed to create card: Invalid response");
         return null;
@@ -204,7 +220,21 @@ export default function KanbanBoard() {
 
   const handleUpdateCard = async (
     cardId: string,
-    data: { title?: string; description?: string | null },
+    data: {
+      title?: string;
+      description?: string | null;
+      status?: "todo" | "in-progress" | "completed";
+      labels?: Array<{
+        text: string;
+        color: string;
+      }>;
+      assignees?: Array<{
+        id: string;
+        name?: string | null;
+        email?: string | null;
+        imageUrl?: string | null;
+      }>;
+    },
   ) => {
     try {
       // Update UI optimistically
@@ -298,34 +328,63 @@ export default function KanbanBoard() {
 
   if (!boards || boards.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-4">
-        <p className="text-muted-foreground">
-          No boards found. Create your first board!
-        </p>
-        <Button onClick={() => createBoard("New Board")} disabled={isCreating}>
-          {isCreating ? "Creating..." : "Create Board"}
+      <div className="flex h-full flex-col items-center justify-center">
+        <p className="text-muted-foreground mb-4">No boards found.</p>
+        <Button onClick={() => setIsNewBoardDialogOpen(true)}>
+          Create a board
         </Button>
+
+        <NewBoardDialog
+          open={isNewBoardDialogOpen}
+          onOpenChange={setIsNewBoardDialogOpen}
+          onCreateBoard={createBoard}
+          isCreating={isCreating}
+        />
       </div>
     );
   }
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
+      <div className="bg-blue-100 p-3 text-center text-blue-800">
+        <strong>Simple Tasks!</strong> Each card is now directly editable -
+        click the pencil icon to edit or the status icon to change the task
+        state.
+      </div>
       <div className="flex items-center justify-between border-b px-4 py-3">
         <BoardSelector
           boards={boards}
-          selectedBoardId={activeBoard ?? undefined}
+          selectedBoardId={activeBoard ?? null}
           onSelectBoard={handleSelectBoard}
           onCreateBoard={createBoard}
           isCreating={isCreating}
         />
-        {currentBoard && (
-          <BoardSettings
-            board={currentBoard}
-            onUpdateBoard={handleUpdateBoard}
-          />
-        )}
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsNewBoardDialogOpen(true)}
+          >
+            <PlusIcon className="mr-1 h-4 w-4" />
+            New Board
+          </Button>
+          {currentBoard && (
+            <BoardSettings
+              board={currentBoard}
+              onUpdateBoard={handleUpdateBoard}
+            />
+          )}
+        </div>
       </div>
+
+      {/* New Board Dialog available throughout the UI */}
+      <NewBoardDialog
+        open={isNewBoardDialogOpen}
+        onOpenChange={setIsNewBoardDialogOpen}
+        onCreateBoard={createBoard}
+        isCreating={isCreating}
+      />
 
       {isLoadingLists ? (
         <div className="flex h-full items-center justify-center">
@@ -339,6 +398,7 @@ export default function KanbanBoard() {
               id={list.id}
               title={list.title}
               cards={list.cards}
+              boardId={activeBoard ?? ""}
               onCreateCard={handleCreateCard}
               onMoveCard={handleMoveCard}
               onUpdateCard={handleUpdateCard}

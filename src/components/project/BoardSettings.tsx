@@ -22,9 +22,11 @@ import {
   DialogTrigger,
 } from "~/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { Settings, UserPlus, Users } from "lucide-react";
+import { Settings, UserPlus, Users, Tag } from "lucide-react";
 import TeamMembers from "./TeamMembers";
+import LabelManager from "./LabelManager";
 import { BoardMembersProvider } from "~/hooks/useBoardMembers";
+import { LabelsProvider } from "~/hooks/useLabels";
 import { toast } from "sonner";
 
 interface BoardData {
@@ -47,7 +49,7 @@ export default function BoardSettings({
 }: BoardSettingsProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState(board.title);
-  const [description, setDescription] = useState(board.description || "");
+  const [description, setDescription] = useState(board.description ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSaveSettings = async () => {
@@ -64,6 +66,7 @@ export default function BoardSettings({
         setIsOpen(false);
       }
     } catch (error) {
+      console.error("Failed to update board settings:", error);
       toast.error("Failed to update board settings");
     } finally {
       setIsSubmitting(false);
@@ -81,13 +84,14 @@ export default function BoardSettings({
         <DialogHeader>
           <DialogTitle>Board Settings</DialogTitle>
           <DialogDescription>
-            Manage board settings and team members
+            Manage board settings, team members, and labels
           </DialogDescription>
         </DialogHeader>
         <Tabs defaultValue="general" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="members">Team Members</TabsTrigger>
+            <TabsTrigger value="labels">Labels</TabsTrigger>
           </TabsList>
           <TabsContent value="general" className="space-y-4 pt-4">
             <div className="space-y-4">
@@ -133,6 +137,11 @@ export default function BoardSettings({
             <BoardMembersProvider boardId={board.id}>
               <TeamMembers boardId={board.id} />
             </BoardMembersProvider>
+          </TabsContent>
+          <TabsContent value="labels" className="pt-4">
+            <LabelsProvider boardId={board.id}>
+              <LabelManager boardId={board.id} />
+            </LabelsProvider>
           </TabsContent>
         </Tabs>
       </DialogContent>

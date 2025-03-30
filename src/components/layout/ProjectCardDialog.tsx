@@ -46,6 +46,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import TaskList from "~/components/project/TaskList";
+import { LabelsProvider } from "~/hooks/useLabels";
 
 interface ProjectCardDialogProps {
   open: boolean;
@@ -219,557 +221,451 @@ export default function ProjectCardDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle className="text-xl">{card.title}</DialogTitle>
+          <div className="flex items-start justify-between">
+            <DialogTitle className="mr-8 text-xl font-semibold">
+              {title}
+            </DialogTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={onDelete}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-2">
-          <TabsList className="grid grid-cols-3">
-            <TabsTrigger value="details">Details</TabsTrigger>
-            <TabsTrigger value="tasks">
-              Tasks {card.tasks ? `(${card.tasks.length})` : "(0)"}
-            </TabsTrigger>
-            <TabsTrigger value="team">Team & Comments</TabsTrigger>
-          </TabsList>
+        <div className="grid grid-cols-[3fr,1fr] gap-6">
+          <div>
+            {/* Main content area */}
+            <Tabs
+              defaultValue="details"
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="w-full"
+            >
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="details">Details</TabsTrigger>
+                <TabsTrigger value="tasks">Tasks</TabsTrigger>
+                <TabsTrigger value="team">Team</TabsTrigger>
+                <TabsTrigger value="comments">Comments</TabsTrigger>
+              </TabsList>
 
-          <TabsContent value="details" className="mt-4 space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                onBlur={handleUpdateProject}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                onBlur={handleUpdateProject}
-                rows={4}
-              />
-            </div>
-            <div className="grid gap-2">
-              <div className="flex items-center justify-between">
-                <Label>Labels</Label>
-                {!showLabelInput && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowLabelInput(true)}
-                    className="h-7 px-2"
-                  >
-                    <Tag className="mr-1 h-3.5 w-3.5" />
-                    Add
-                  </Button>
-                )}
-              </div>
-              {showLabelInput && (
-                <div className="grid gap-2">
-                  <div className="flex gap-2">
+              {/* Details tab */}
+              <TabsContent value="details" className="pt-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Title</Label>
                     <Input
-                      value={newLabelText}
-                      onChange={(e) => setNewLabelText(e.target.value)}
-                      placeholder="Enter label name"
-                      className="h-8"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") addLabel();
-                        if (e.key === "Escape") {
-                          setShowLabelInput(false);
-                          setNewLabelText("");
-                        }
-                      }}
-                      autoFocus
+                      id="title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="Project title"
                     />
-                    <Select
-                      value={newLabelColor}
-                      onValueChange={setNewLabelColor}
-                    >
-                      <SelectTrigger className="h-8 w-[100px]">
-                        <SelectValue placeholder="Color" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {labelColors.map((color) => (
-                          <SelectItem key={color.name} value={color.name}>
-                            <div className="flex items-center">
-                              <div
-                                className={`h-3 w-3 rounded-full ${color.bg} mr-2`}
-                              ></div>
-                              {color.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                   </div>
-                  <div className="flex gap-2">
-                    <Button size="sm" className="h-8" onClick={addLabel}>
-                      Add
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8"
-                      onClick={() => {
-                        setShowLabelInput(false);
-                        setNewLabelText("");
-                      }}
-                    >
-                      Cancel
-                    </Button>
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Project description"
+                      rows={5}
+                    />
                   </div>
-                </div>
-              )}
-              <div className="mt-1 flex flex-wrap gap-1">
-                {labels.map((label, index) => {
-                  const colorConfig =
-                    labelColors.find((c) => c.name === label.color) ??
-                    labelColors[7]; // Default to gray
-                  return (
-                    <Badge
-                      key={index}
-                      variant="outline"
-                      className={`${colorConfig?.bg} ${colorConfig?.text} border-0 hover:${colorConfig?.bg}`}
-                    >
-                      {label.text}
-                      <button
-                        className="ml-1 hover:text-red-500"
-                        onClick={() => removeLabel(label.text)}
-                      >
-                        ×
-                      </button>
-                    </Badge>
-                  );
-                })}
-                {labels.length === 0 && (
-                  <span className="text-muted-foreground text-xs">
-                    No labels added yet
-                  </span>
-                )}
-              </div>
-            </div>
-          </TabsContent>
 
-          <TabsContent value="tasks" className="mt-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium">Tasks</h3>
-              <div className="text-muted-foreground text-sm">
-                {card.tasks
-                  ? `${card.tasks.filter((t) => t.status === "completed").length}/${card.tasks.length} completed`
-                  : "0/0 completed"}{" "}
-                ({getTaskCompletionPercentage()}%)
-              </div>
-            </div>
-
-            {/* Task list */}
-            <div className="space-y-2">
-              {card.tasks && card.tasks.length > 0 ? (
-                card.tasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className="bg-muted/30 rounded-lg border p-3"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-2">
-                        <button
-                          onClick={() =>
-                            handleUpdateTaskStatus(
-                              task.id,
-                              task.status === "completed"
-                                ? "todo"
-                                : task.status === "todo"
-                                  ? "in-progress"
-                                  : "completed",
-                            )
-                          }
-                          className="mt-0.5"
-                        >
-                          {task.status === "completed" ? (
-                            <CheckCircle2 className="h-5 w-5 text-green-500" />
-                          ) : task.status === "in-progress" ? (
-                            <Clock className="h-5 w-5 text-blue-500" />
-                          ) : (
-                            <Circle className="text-muted-foreground h-5 w-5" />
-                          )}
-                        </button>
-                        <div>
-                          <h4 className="text-sm font-medium">{task.title}</h4>
-                          <p className="text-muted-foreground text-xs">
-                            {task.description}
-                          </p>
-
-                          {task.dueDate && (
-                            <div className="text-muted-foreground mt-1 flex items-center text-xs">
-                              <CalendarIcon className="mr-1 h-3 w-3" />
-                              Due {new Date(task.dueDate).toLocaleDateString()}
-                            </div>
-                          )}
-
-                          {task.labels && task.labels.length > 0 && (
-                            <div className="mt-1 flex flex-wrap gap-1">
-                              {task.labels.map((label, index) => {
-                                const colorConfig =
-                                  labelColors.find(
-                                    (c) => c.name === label.color,
-                                  ) ?? labelColors[7];
-                                return (
-                                  <span
-                                    key={index}
-                                    className={`${colorConfig?.bg} ${colorConfig?.text} rounded-full px-1.5 py-0.5 text-xs`}
-                                  >
-                                    {label.text}
-                                  </span>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center">
-                        {task.assignees && task.assignees.length > 0 && (
-                          <div className="mr-2 flex -space-x-2 overflow-hidden">
-                            {task.assignees.map((assignee, index) => (
-                              <Avatar
-                                key={index}
-                                className="border-background h-5 w-5 border-2"
-                              >
-                                <AvatarFallback className="bg-purple-100 text-[8px] text-purple-700">
-                                  {assignee.name.substring(0, 2).toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                            ))}
-                          </div>
-                        )}
-
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-muted-foreground hover:text-destructive h-6 w-6 p-0"
-                          onClick={() => onDeleteTask(task.id)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-muted-foreground py-6 text-center">
-                  No tasks added yet
-                </div>
-              )}
-            </div>
-
-            {/* Add new task */}
-            {showNewTaskForm ? (
-              <div className="space-y-3 rounded-lg border p-3">
-                <h4 className="text-sm font-medium">Add New Task</h4>
-                <div className="grid gap-2">
-                  <Label htmlFor="new-task-title">Title</Label>
-                  <Input
-                    id="new-task-title"
-                    value={newTaskTitle}
-                    onChange={(e) => setNewTaskTitle(e.target.value)}
-                    placeholder="Enter task title"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="new-task-description">Description</Label>
-                  <Textarea
-                    id="new-task-description"
-                    value={newTaskDescription}
-                    onChange={(e) => setNewTaskDescription(e.target.value)}
-                    placeholder="Enter task description"
-                    rows={2}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="grid gap-2">
-                    <Label htmlFor="new-task-status">Status</Label>
-                    <select
-                      id="new-task-status"
-                      value={newTaskStatus}
-                      onChange={(e) =>
-                        setNewTaskStatus(
-                          e.target.value as
-                            | "todo"
-                            | "in-progress"
-                            | "completed",
-                        )
-                      }
-                      className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <option value="todo">To Do</option>
-                      <option value="in-progress">In Progress</option>
-                      <option value="completed">Completed</option>
-                    </select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Due Date</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
+                  <div className="space-y-2">
+                    <Label>Labels</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {labels.map((label, i) => {
+                        const colorConfig =
+                          labelColors.find((c) => c.name === label.color) ??
+                          labelColors[7]; // Default to gray
+                        return (
+                          <Badge
+                            key={i}
+                            className={`${colorConfig.bg} ${colorConfig.text} gap-1 hover:${colorConfig.bg}`}
+                          >
+                            {label.text}
+                            <button
+                              className="ml-1 opacity-70 hover:opacity-100"
+                              onClick={() => removeLabel(label.text)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        );
+                      })}
+                      {!showLabelInput && (
                         <Button
                           variant="outline"
-                          className="h-9 justify-start text-left text-sm font-normal"
+                          size="sm"
+                          className="h-6"
+                          onClick={() => setShowLabelInput(true)}
                         >
-                          <CalendarIcon className="mr-2 h-3.5 w-3.5" />
-                          {newTaskDueDate
-                            ? format(newTaskDueDate, "PPP")
-                            : "Select a date"}
+                          <Plus className="mr-1 h-3 w-3" />
+                          Add label
                         </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar
-                          mode="single"
-                          selected={newTaskDueDate}
-                          onSelect={setNewTaskDueDate}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </div>
-                <div className="mt-2 flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setShowNewTaskForm(false);
-                      setNewTaskTitle("");
-                      setNewTaskDescription("");
-                      setNewTaskStatus("todo");
-                      setNewTaskDueDate(undefined);
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleAddTask}
-                    disabled={!newTaskTitle.trim()}
-                  >
-                    Add Task
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <Button
-                variant="outline"
-                className="flex w-full items-center justify-center gap-1"
-                onClick={() => setShowNewTaskForm(true)}
-              >
-                <Plus className="h-4 w-4" />
-                Add Task
-              </Button>
-            )}
-          </TabsContent>
-
-          <TabsContent value="team" className="mt-4 space-y-4">
-            {/* Contributors section */}
-            <div>
-              <h3 className="mb-3 text-lg font-medium">Team Members</h3>
-
-              <div className="space-y-2">
-                {card.contributors && card.contributors.length > 0 ? (
-                  card.contributors.map((contributor, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-3 rounded-lg border p-2"
-                    >
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-purple-100 text-purple-700">
-                          {contributor.name.substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-sm font-medium">
-                          {contributor.name}
-                        </p>
-                        <p className="text-muted-foreground text-xs">
-                          {contributor.role}
-                        </p>
-                      </div>
+                      )}
                     </div>
-                  ))
-                ) : (
-                  <div className="text-muted-foreground py-4 text-center">
-                    No team members added yet
-                  </div>
-                )}
-              </div>
 
-              {/* Add new contributor */}
-              {showNewContributorForm ? (
-                <div className="mt-3 space-y-3 rounded-lg border p-3">
-                  <h4 className="text-sm font-medium">Add Team Member</h4>
-                  <div className="grid gap-2">
-                    <Label htmlFor="new-contributor-name">Name</Label>
-                    <Input
-                      id="new-contributor-name"
-                      value={newContributorName}
-                      onChange={(e) => setNewContributorName(e.target.value)}
-                      placeholder="Enter name"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="new-contributor-role">Role</Label>
-                    <Input
-                      id="new-contributor-role"
-                      value={newContributorRole}
-                      onChange={(e) => setNewContributorRole(e.target.value)}
-                      placeholder="Enter role"
-                    />
-                  </div>
-                  <div className="mt-2 flex justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setShowNewContributorForm(false);
-                        setNewContributorName("");
-                        setNewContributorRole("");
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={handleAddContributor}
-                      disabled={
-                        !newContributorName.trim() || !newContributorRole.trim()
-                      }
-                    >
-                      Add Member
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <Button
-                  variant="outline"
-                  className="mt-3 flex w-full items-center justify-center gap-1"
-                  onClick={() => setShowNewContributorForm(true)}
-                >
-                  <Plus className="h-4 w-4" />
-                  Add Team Member
-                </Button>
-              )}
-            </div>
-
-            <Separator className="my-4" />
-
-            {/* Comments section */}
-            <div>
-              <h3 className="mb-3 text-lg font-medium">Comments</h3>
-
-              <div className="space-y-3">
-                {card.comments && card.comments.length > 0 ? (
-                  card.comments.map((comment, index) => (
-                    <div
-                      key={index}
-                      className="bg-muted/30 rounded-lg border p-3"
-                    >
-                      <div className="mb-1 flex items-center gap-2">
-                        <Avatar className="h-6 w-6">
-                          <AvatarFallback className="bg-blue-100 text-[10px] text-blue-700">
-                            {comment.author.substring(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-sm font-medium">
-                            {comment.author}
-                          </span>
-                          <span className="text-muted-foreground text-xs">
-                            {new Date(comment.createdAt).toLocaleDateString()}
-                          </span>
+                    {showLabelInput && (
+                      <div className="flex items-end gap-2">
+                        <div className="flex-1 space-y-1">
+                          <div className="text-xs">Label text</div>
+                          <Input
+                            value={newLabelText}
+                            onChange={(e) => setNewLabelText(e.target.value)}
+                            className="h-8"
+                            placeholder="Enter label text"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-xs">Color</div>
+                          <Select
+                            value={newLabelColor}
+                            onValueChange={setNewLabelColor}
+                          >
+                            <SelectTrigger className="h-8 w-[100px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {labelColors.map((color) => (
+                                <SelectItem key={color.name} value={color.name}>
+                                  <div className="flex items-center gap-2">
+                                    <div
+                                      className={`h-3 w-3 rounded-full ${color.bg}`}
+                                    ></div>
+                                    <span>
+                                      {color.name.charAt(0).toUpperCase() +
+                                        color.name.slice(1)}
+                                    </span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex space-x-1">
+                          <Button
+                            size="sm"
+                            className="h-8"
+                            onClick={addLabel}
+                            disabled={!newLabelText.trim()}
+                          >
+                            Add
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8"
+                            onClick={() => setShowLabelInput(false)}
+                          >
+                            Cancel
+                          </Button>
                         </div>
                       </div>
-                      <p className="ml-8 text-sm">{comment.text}</p>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-muted-foreground py-4 text-center">
-                    No comments yet
+                    )}
                   </div>
-                )}
-              </div>
 
-              {/* Add new comment */}
-              {showNewCommentForm ? (
-                <div className="mt-3 space-y-3 rounded-lg border p-3">
-                  <h4 className="text-sm font-medium">Add Comment</h4>
-                  <div className="grid gap-2">
-                    <Label htmlFor="new-comment-author">Your Name</Label>
-                    <Input
-                      id="new-comment-author"
-                      value={newCommentAuthor}
-                      onChange={(e) => setNewCommentAuthor(e.target.value)}
-                      placeholder="Enter your name"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="new-comment-text">Comment</Label>
-                    <Textarea
-                      id="new-comment-text"
-                      value={newCommentText}
-                      onChange={(e) => setNewCommentText(e.target.value)}
-                      placeholder="Enter your comment"
-                      rows={3}
-                    />
-                  </div>
-                  <div className="mt-2 flex justify-end gap-2">
+                  <Button
+                    onClick={handleUpdateProject}
+                    disabled={!title.trim()}
+                    className="w-full"
+                  >
+                    Save Changes
+                  </Button>
+                </div>
+              </TabsContent>
+
+              {/* Tasks tab */}
+              <TabsContent value="tasks" className="pt-4">
+                <LabelsProvider boardId={card.boardId || "default"}>
+                  <TaskList
+                    projectCardId={card.id}
+                    boardId={card.boardId || "default"}
+                  />
+                </LabelsProvider>
+              </TabsContent>
+
+              {/* Team tab */}
+              <TabsContent value="team" className="pt-4">
+                <div className="space-y-4">
+                  <h3 className="font-medium">Team Members</h3>
+
+                  {card.contributors && card.contributors.length > 0 ? (
+                    <div className="space-y-2">
+                      {card.contributors.map((contributor, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center justify-between rounded-md border p-2"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="bg-purple-100 text-sm text-purple-700">
+                                {contributor.name.substring(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-medium">
+                                {contributor.name}
+                              </div>
+                              <div className="text-muted-foreground text-xs">
+                                {contributor.role}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-muted-foreground py-6 text-center">
+                      No team members added yet.
+                    </div>
+                  )}
+
+                  {showNewContributorForm ? (
+                    <div className="space-y-3 rounded-md border p-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="contributorName">Name</Label>
+                        <Input
+                          id="contributorName"
+                          value={newContributorName}
+                          onChange={(e) =>
+                            setNewContributorName(e.target.value)
+                          }
+                          placeholder="Team member name"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="contributorRole">Role</Label>
+                        <Input
+                          id="contributorRole"
+                          value={newContributorRole}
+                          onChange={(e) =>
+                            setNewContributorRole(e.target.value)
+                          }
+                          placeholder="e.g. Designer, Developer"
+                        />
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button
+                          size="sm"
+                          onClick={handleAddContributor}
+                          disabled={
+                            !newContributorName.trim() ||
+                            !newContributorRole.trim()
+                          }
+                        >
+                          Add Member
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setShowNewContributorForm(false);
+                            setNewContributorName("");
+                            setNewContributorRole("");
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
                     <Button
                       variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setShowNewCommentForm(false);
-                        setNewCommentAuthor("");
-                        setNewCommentText("");
-                      }}
+                      className="w-full"
+                      onClick={() => setShowNewContributorForm(true)}
                     >
-                      Cancel
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Team Member
                     </Button>
+                  )}
+                </div>
+              </TabsContent>
+
+              {/* Comments tab */}
+              <TabsContent value="comments" className="pt-4">
+                <div className="space-y-4">
+                  <h3 className="font-medium">Discussion</h3>
+
+                  {card.comments && card.comments.length > 0 ? (
+                    <div className="space-y-3">
+                      {card.comments.map((comment, i) => (
+                        <div
+                          key={i}
+                          className="rounded-md border p-3 shadow-sm"
+                        >
+                          <div className="mb-2 flex items-center gap-2">
+                            <Avatar className="h-6 w-6">
+                              <AvatarFallback className="bg-blue-100 text-[10px] text-blue-700">
+                                {comment.author.substring(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm font-medium">
+                              {comment.author}
+                            </span>
+                            {comment.createdAt && (
+                              <span className="text-muted-foreground text-xs">
+                                {new Date(
+                                  comment.createdAt,
+                                ).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm">{comment.text}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-muted-foreground py-6 text-center">
+                      No comments yet. Start the discussion!
+                    </div>
+                  )}
+
+                  {showNewCommentForm ? (
+                    <div className="space-y-3 rounded-md border p-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="commentAuthor">Your Name</Label>
+                        <Input
+                          id="commentAuthor"
+                          value={newCommentAuthor}
+                          onChange={(e) => setNewCommentAuthor(e.target.value)}
+                          placeholder="Your name"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="commentText">Comment</Label>
+                        <Textarea
+                          id="commentText"
+                          value={newCommentText}
+                          onChange={(e) => setNewCommentText(e.target.value)}
+                          placeholder="Write your comment..."
+                          rows={3}
+                        />
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button
+                          size="sm"
+                          onClick={handleAddComment}
+                          disabled={
+                            !newCommentAuthor.trim() || !newCommentText.trim()
+                          }
+                        >
+                          Post Comment
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setShowNewCommentForm(false);
+                            setNewCommentAuthor("");
+                            setNewCommentText("");
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
                     <Button
-                      size="sm"
-                      onClick={handleAddComment}
-                      disabled={
-                        !newCommentAuthor.trim() || !newCommentText.trim()
-                      }
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => setShowNewCommentForm(true)}
                     >
+                      <Plus className="mr-2 h-4 w-4" />
                       Add Comment
                     </Button>
-                  </div>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          <div className="space-y-6">
+            {/* Sidebar */}
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium">Status</h4>
+              <div className="flex items-center gap-1">
+                <div className="h-2 flex-1 overflow-hidden rounded-full bg-green-500">
+                  <div
+                    className="h-full bg-green-200"
+                    style={{
+                      width: `${100 - getTaskCompletionPercentage()}%`,
+                    }}
+                  ></div>
+                </div>
+                <span className="text-xs font-medium">
+                  {getTaskCompletionPercentage()}%
+                </span>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div>
+              <h4 className="mb-2 text-sm font-medium">Team</h4>
+              {card.contributors && card.contributors.length > 0 ? (
+                <div className="flex -space-x-2 overflow-hidden">
+                  {card.contributors.slice(0, 5).map((contributor, i) => (
+                    <Avatar
+                      key={i}
+                      className="border-background h-8 w-8 border-2"
+                    >
+                      <AvatarFallback className="bg-purple-100 text-xs text-purple-700">
+                        {contributor.name.substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  ))}
+                  {card.contributors.length > 5 && (
+                    <div className="border-background bg-muted flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-medium">
+                      +{card.contributors.length - 5}
+                    </div>
+                  )}
                 </div>
               ) : (
-                <Button
-                  variant="outline"
-                  className="mt-3 flex w-full items-center justify-center gap-1"
-                  onClick={() => setShowNewCommentForm(true)}
-                >
-                  <Plus className="h-4 w-4" />
-                  Add Comment
-                </Button>
+                <div className="text-muted-foreground text-xs">
+                  No team members yet
+                </div>
               )}
             </div>
-          </TabsContent>
-        </Tabs>
 
-        <DialogFooter className="mt-4 flex justify-between sm:justify-between">
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={() => {
-              onDelete();
-              onOpenChange(false);
-            }}
-            className="mr-auto"
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete Project
+            <Separator />
+
+            <div>
+              <h4 className="mb-2 text-sm font-medium">Labels</h4>
+              {labels.length > 0 ? (
+                <div className="flex flex-wrap gap-1">
+                  {labels.map((label, i) => {
+                    const colorConfig =
+                      labelColors.find((c) => c.name === label.color) ??
+                      labelColors[7];
+                    return (
+                      <span
+                        key={i}
+                        className={`${colorConfig.bg} ${colorConfig.text} inline-flex rounded-full px-2 py-0.5 text-xs`}
+                      >
+                        {label.text}
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-muted-foreground text-xs">
+                  No labels yet
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Close
           </Button>
         </DialogFooter>
       </DialogContent>
