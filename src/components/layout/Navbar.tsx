@@ -33,7 +33,7 @@ export function Navbar() {
             Home
           </Link>
           <Link
-            href="/boards"
+            href="/board"
             className="hover:text-primary text-sm font-medium transition-colors"
           >
             Boards
@@ -92,7 +92,7 @@ export function Navbar() {
                   Home
                 </Link>
                 <Link
-                  href="/boards"
+                  href="/board"
                   className="block px-2 py-1 text-lg"
                   onClick={() => setIsOpen(false)}
                 >

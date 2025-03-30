@@ -1,10 +1,9 @@
-import Link from "next/link";
+import KanbanBoard from "~/components/layout/KanbanBoard";
 
 export default function HomePage() {
   return (
-    <div>
-      <h1>Home Page</h1>
-      <Link href="/about">About</Link>
-    </div>
+    <main className="container mx-auto p-4 pt-6">
+      <KanbanBoard />
+    </main>
   );
 }
