@@ -17,9 +17,11 @@ export default async function DashboardPage() {
     <div className="container mx-auto p-4 pt-6">
       <header className="mb-6">
         <h1 className="text-3xl font-bold">Your Boards</h1>
-        <p className="text-muted-foreground">Manage your tasks and projects</p>
+        <p className="text-muted-foreground dark:text-muted-foreground/90">
+          Manage your tasks and projects
+        </p>
       </header>
-      <KanbanBoard userId={userId} />
+      <KanbanBoard />
     </div>
   );
 }

@@ -114,11 +114,11 @@ export default function List({
   return (
     <div
       ref={listRef}
-      className={`bg-muted/20 flex h-full w-72 shrink-0 flex-col rounded-md border ${
-        isOver && !isViewer ? "border-blue-500" : ""
+      className={`bg-card/30 dark:bg-card/50 flex h-full w-72 shrink-0 flex-col rounded-md border ${
+        isOver && !isViewer ? "border-blue-500" : "border-border"
       }`}
     >
-      <div className="flex items-center justify-between border-b p-2">
+      <div className="border-border flex items-center justify-between border-b p-2">
         <h3 className="text-sm font-medium">{title}</h3>
         {!isViewer && (
           <DropdownMenu>
@@ -159,7 +159,7 @@ export default function List({
         ))}
 
         {showAddForm && !isViewer ? (
-          <div className="bg-background rounded-md border p-2 shadow-sm">
+          <div className="border-border bg-card rounded-md border p-2 shadow-sm">
             <Input
               value={newCardTitle}
               onChange={(e) => setNewCardTitle(e.target.value)}

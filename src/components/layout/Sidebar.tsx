@@ -15,6 +15,7 @@ import {
   TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { cn } from "~/lib/utils";
+import { ThemeToggle } from "~/components/ui/theme-toggle";
 
 interface SidebarProps {
   className?: string;
@@ -52,7 +53,7 @@ export default function Sidebar({ className }: SidebarProps) {
           className="flex items-center gap-2 text-xl font-bold text-purple-700"
         >
           <KanbanSquare className="h-6 w-6 flex-shrink-0" />
-          {isOpen && <span>Trello Clone</span>}
+          {isOpen && <span>Track Thor</span>}
         </Link>
         <Button
           variant="ghost"
@@ -102,10 +103,22 @@ export default function Sidebar({ className }: SidebarProps) {
       <div
         className={cn(
           "flex items-center border-t p-4",
-          isOpen ? "justify-start" : "justify-center",
+          isOpen ? "justify-between" : "justify-center",
         )}
       >
-        <UserButton showName={isOpen} />
+        {isOpen ? (
+          <>
+            <UserButton showName={isOpen} />
+            <ThemeToggle size="sm" />
+          </>
+        ) : (
+          <>
+            <UserButton showName={isOpen} />
+            <div className="mt-4">
+              <ThemeToggle size="sm" />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -133,7 +146,7 @@ export default function Sidebar({ className }: SidebarProps) {
             className="flex items-center gap-2 text-xl font-bold text-purple-700"
           >
             <KanbanSquare className="h-6 w-6" />
-            <span>Trello Clone</span>
+            <span>Track Thor</span>
           </Link>
         </div>
         <nav className="flex flex-1 flex-col p-4">
@@ -157,8 +170,9 @@ export default function Sidebar({ className }: SidebarProps) {
             ))}
           </ul>
         </nav>
-        <div className="flex items-center justify-start border-t p-4">
+        <div className="flex items-center justify-between border-t p-4">
           <UserButton showName={true} />
+          <ThemeToggle size="sm" />
         </div>
       </SheetContent>
     </Sheet>

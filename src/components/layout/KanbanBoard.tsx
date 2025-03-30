@@ -425,7 +425,7 @@ export default function KanbanBoard() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className="bg-blue-100 p-3 text-center text-blue-800">
+      <div className="bg-blue-100 p-3 text-center text-blue-800 dark:bg-blue-900/40 dark:text-blue-200">
         <strong>Simple Tasks!</strong> Each card is now directly editable -
         click the pencil icon to edit or the status icon to change the task
         state.

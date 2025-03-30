@@ -5,9 +5,10 @@ import { Geist } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "sonner";
 import { cn } from "~/lib/utils";
+import { ThemeProvider } from "~/components/ui/theme-provider";
 
 export const metadata: Metadata = {
-  title: "Trello Clone",
+  title: "Track Thor",
   description:
     "A simple and effective task management application built with Next.js, React DnD, and modern web technologies.",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
@@ -23,15 +24,22 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <ClerkProvider>
-      <html lang="en" className={geist.variable}>
+      <html lang="en" className={geist.variable} suppressHydrationWarning>
         <body
           className={cn(
             "bg-background min-h-screen font-sans antialiased",
             geist.variable,
           )}
         >
-          {children}
-          <Toaster position="top-right" />
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+            <Toaster position="top-right" />
+          </ThemeProvider>
         </body>
       </html>
     </ClerkProvider>

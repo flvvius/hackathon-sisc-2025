@@ -14,14 +14,46 @@ import { Badge } from "~/components/ui/badge";
 
 // Shared label colors array from KanbanCard
 const labelColors = [
-  { name: "green", bg: "bg-green-100", text: "text-green-700" },
-  { name: "red", bg: "bg-red-100", text: "text-red-700" },
-  { name: "blue", bg: "bg-blue-100", text: "text-blue-700" },
-  { name: "yellow", bg: "bg-yellow-100", text: "text-yellow-700" },
-  { name: "purple", bg: "bg-purple-100", text: "text-purple-700" },
-  { name: "pink", bg: "bg-pink-100", text: "text-pink-700" },
-  { name: "indigo", bg: "bg-indigo-100", text: "text-indigo-700" },
-  { name: "gray", bg: "bg-gray-100", text: "text-gray-700" },
+  {
+    name: "green",
+    bg: "bg-green-100 dark:bg-green-950/50",
+    text: "text-green-700 dark:text-green-300",
+  },
+  {
+    name: "red",
+    bg: "bg-red-100 dark:bg-red-950/50",
+    text: "text-red-700 dark:text-red-300",
+  },
+  {
+    name: "blue",
+    bg: "bg-blue-100 dark:bg-blue-950/50",
+    text: "text-blue-700 dark:text-blue-300",
+  },
+  {
+    name: "yellow",
+    bg: "bg-yellow-100 dark:bg-yellow-900/40",
+    text: "text-yellow-700 dark:text-yellow-300",
+  },
+  {
+    name: "purple",
+    bg: "bg-purple-100 dark:bg-purple-950/50",
+    text: "text-purple-700 dark:text-purple-300",
+  },
+  {
+    name: "pink",
+    bg: "bg-pink-100 dark:bg-pink-950/50",
+    text: "text-pink-700 dark:text-pink-300",
+  },
+  {
+    name: "indigo",
+    bg: "bg-indigo-100 dark:bg-indigo-950/50",
+    text: "text-indigo-700 dark:text-indigo-300",
+  },
+  {
+    name: "gray",
+    bg: "bg-gray-100 dark:bg-gray-800",
+    text: "text-gray-700 dark:text-gray-300",
+  },
 ] as const;
 
 type CardLabel = {
@@ -81,7 +113,7 @@ export default function TaskLabelPicker({
               <button
                 type="button"
                 onClick={() => handleRemoveLabel(index)}
-                className="ml-1 flex h-3 w-3 items-center justify-center rounded-full hover:bg-gray-200/50"
+                className="ml-1 flex h-3 w-3 items-center justify-center rounded-full hover:bg-gray-200/50 dark:hover:bg-gray-700/50"
               >
                 <X className="h-2 w-2" />
               </button>

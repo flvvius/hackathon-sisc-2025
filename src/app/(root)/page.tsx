@@ -27,7 +27,7 @@ export default function HomePage() {
               effortlessly
             </span>
           </h1>
-          <p className="max-w-2xl text-lg text-gray-600 md:text-xl">
+          <p className="max-w-2xl text-lg text-gray-600 md:text-xl dark:text-gray-300">
             A powerful task management application that helps teams collaborate,
             organize, and track projects with ease.
           </p>
@@ -41,7 +41,7 @@ export default function HomePage() {
             </Button>
             <Button
               variant="outline"
-              className="h-auto border-purple-200 px-8 py-6 text-lg text-purple-700 hover:bg-purple-50"
+              className="h-auto border-purple-200 px-8 py-6 text-lg text-purple-700 hover:bg-purple-50 dark:border-purple-900 dark:text-purple-300 dark:hover:bg-purple-950/50"
               onClick={() => router.push("/demo")}
             >
               Watch Demo
@@ -51,7 +51,7 @@ export default function HomePage() {
         <div
           className={`flex-1 transition-all delay-300 duration-700 ${isLoaded ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
         >
-          <div className="relative h-[300px] w-full overflow-hidden rounded-xl border border-purple-100 shadow-2xl md:h-[400px]">
+          <div className="relative h-[300px] w-full overflow-hidden rounded-xl border border-purple-100 shadow-2xl md:h-[400px] dark:border-purple-900">
             <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-purple-500/90 to-indigo-600/90">
               <div className="absolute top-4 right-4 left-4 h-8 rounded-md bg-white/10 backdrop-blur-sm"></div>
               <div className="absolute top-16 right-[40%] bottom-4 left-4 rounded-md bg-white/10 backdrop-blur-sm"></div>
@@ -66,44 +66,44 @@ export default function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section className="bg-white py-16">
+      <section className="dark:bg-card bg-white py-16">
         <div className="container mx-auto px-4">
           <h2 className="mb-12 text-center text-3xl font-bold">Key Features</h2>
           <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
             <div
-              className={`rounded-xl border border-purple-100 bg-gradient-to-br from-purple-50 to-indigo-50 p-6 transition-all delay-500 duration-700 ${isLoaded ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
+              className={`rounded-xl border border-purple-100 bg-gradient-to-br from-purple-50 to-indigo-50 p-6 transition-all delay-500 duration-700 dark:border-purple-900 dark:from-purple-950/40 dark:to-indigo-950/40 ${isLoaded ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
             >
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-purple-100 text-purple-600">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-purple-100 text-purple-600 dark:bg-purple-900/60 dark:text-purple-300">
                 <Layout className="h-6 w-6" />
               </div>
               <h3 className="mb-2 text-xl font-semibold">Intuitive Boards</h3>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-300">
                 Create and customize boards to visualize your workflow and track
                 progress in real-time.
               </p>
             </div>
 
             <div
-              className={`rounded-xl border border-purple-100 bg-gradient-to-br from-purple-50 to-indigo-50 p-6 transition-all delay-600 duration-700 ${isLoaded ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
+              className={`rounded-xl border border-purple-100 bg-gradient-to-br from-purple-50 to-indigo-50 p-6 transition-all delay-600 duration-700 dark:border-purple-900 dark:from-purple-950/40 dark:to-indigo-950/40 ${isLoaded ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
             >
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/60 dark:text-indigo-300">
                 <Users className="h-6 w-6" />
               </div>
               <h3 className="mb-2 text-xl font-semibold">Team Collaboration</h3>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-300">
                 Invite team members, assign tasks, and communicate effectively
                 within your projects.
               </p>
             </div>
 
             <div
-              className={`rounded-xl border border-purple-100 bg-gradient-to-br from-purple-50 to-indigo-50 p-6 transition-all delay-700 duration-700 ${isLoaded ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
+              className={`rounded-xl border border-purple-100 bg-gradient-to-br from-purple-50 to-indigo-50 p-6 transition-all delay-700 duration-700 dark:border-purple-900 dark:from-purple-950/40 dark:to-indigo-950/40 ${isLoaded ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
             >
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-purple-100 text-purple-600">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-purple-100 text-purple-600 dark:bg-purple-900/60 dark:text-purple-300">
                 <CheckCircle className="h-6 w-6" />
               </div>
               <h3 className="mb-2 text-xl font-semibold">Task Management</h3>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-300">
                 Break down projects into manageable tasks, set deadlines, and
                 track completion.
               </p>
@@ -123,7 +123,7 @@ export default function HomePage() {
             achieve more together.
           </p>
           <Button
-            className="h-auto bg-white px-8 py-6 text-lg text-purple-700 hover:bg-purple-50"
+            className="h-auto bg-white px-8 py-6 text-lg text-purple-700 hover:bg-purple-50 dark:bg-gray-900 dark:text-purple-300 dark:hover:bg-gray-800"
             onClick={() => router.push("/dashboard")}
           >
             Get Started for Free
