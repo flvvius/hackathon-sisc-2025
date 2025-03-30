@@ -33,16 +33,10 @@ export default function Navbar() {
             Home
           </Link>
           <Link
-            href="/board"
+            href="/dashboard"
             className="hover:text-primary text-sm font-medium transition-colors"
           >
             Boards
-          </Link>
-          <Link
-            href="/workspace"
-            className="hover:text-primary text-sm font-medium transition-colors"
-          >
-            Workspace
           </Link>
         </div>
 
@@ -92,18 +86,11 @@ export default function Navbar() {
                   Home
                 </Link>
                 <Link
-                  href="/board"
+                  href="/dashboard"
                   className="block px-2 py-1 text-lg"
                   onClick={() => setIsOpen(false)}
                 >
                   Boards
-                </Link>
-                <Link
-                  href="/workspace"
-                  className="block px-2 py-1 text-lg"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Workspace
                 </Link>
               </div>
             </SheetContent>
