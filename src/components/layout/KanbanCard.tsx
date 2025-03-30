@@ -117,6 +117,7 @@ interface KanbanCardProps {
     data: Partial<CardItem> & { _shouldSort?: boolean },
   ) => void;
   deleteCard: () => void;
+  isReadOnly?: boolean;
 }
 
 export default function KanbanCard({
@@ -125,6 +126,7 @@ export default function KanbanCard({
   boardId,
   updateCard,
   deleteCard,
+  isReadOnly = false,
 }: KanbanCardProps) {
   // Local dialog state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -141,13 +143,14 @@ export default function KanbanCard({
   // Create a ref for the drag element
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // Set up drag source
+  // Set up drag source - disable dragging for readonly mode
   const [{ isDragging }, connectDrag] = useDrag({
     type: "CARD",
     item: { id: card.id, listId },
     collect: (monitor) => ({
       isDragging: !!monitor.isDragging(),
     }),
+    canDrag: !isReadOnly,
   });
 
   // Connect the drag ref
@@ -155,6 +158,8 @@ export default function KanbanCard({
 
   // Handle opening the dialog - reset form values
   const handleOpenDialog = () => {
+    if (isReadOnly) return;
+
     setEditTitle(card.title);
     setEditDescription(card.description ?? "");
     setEditStatus(card.status ?? "todo");
@@ -165,7 +170,7 @@ export default function KanbanCard({
 
   // Handle saving the dialog changes
   const handleSaveChanges = () => {
-    if (!editTitle.trim()) return;
+    if (isReadOnly || !editTitle.trim()) return;
 
     // Check if status has changed
     const statusChanged = editStatus !== (card.status ?? "todo");
@@ -184,12 +189,16 @@ export default function KanbanCard({
 
   // Handle deleting the card
   const handleDelete = (e: React.MouseEvent) => {
+    if (isReadOnly) return;
+
     e.stopPropagation();
     deleteCard();
   };
 
   // Toggle status without opening dialog
   const handleStatusToggle = (e: React.MouseEvent) => {
+    if (isReadOnly) return;
+
     e.stopPropagation();
 
     const currentStatus = card.status ?? "todo";
@@ -233,165 +242,204 @@ export default function KanbanCard({
     <>
       <div
         ref={cardRef}
-        className={`rounded-lg border bg-white p-3 shadow-sm transition-all duration-200 hover:shadow ${
-          isDragging ? "rotate-1 opacity-50" : ""
-        }`}
+        className={`rounded-lg border bg-white p-3 shadow-sm transition-all duration-200 ${
+          !isReadOnly ? "hover:shadow" : ""
+        } ${isDragging ? "rotate-1 opacity-50" : ""}`}
+        onClick={isReadOnly ? undefined : handleOpenDialog}
       >
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-2">
-            <button
-              onClick={handleStatusToggle}
-              className="hover:bg-muted/50 mt-0.5 rounded-full p-1"
-              title={`Status: ${card.status ?? "todo"}`}
-            >
-              <StatusIcon />
-            </button>
+            {isReadOnly ? (
+              <div className="mt-0.5 rounded-full p-1">
+                <StatusIcon />
+              </div>
+            ) : (
+              <button
+                onClick={handleStatusToggle}
+                className="hover:bg-muted/50 mt-0.5 rounded-full p-1"
+                title={`Status: ${card.status ?? "todo"}`}
+              >
+                <StatusIcon />
+              </button>
+            )}
             <div>
               <h4 className="text-sm font-medium">{card.title}</h4>
               {card.description && (
-                <p className="text-muted-foreground mt-1 ml-1 line-clamp-2 text-xs">
+                <p className="text-muted-foreground line-clamp-2 text-xs">
                   {card.description}
                 </p>
               )}
+
+              {/* Show labels if present */}
+              {card.labels && card.labels.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {card.labels.map((label, index) => {
+                    const colorConfig = getColorConfig(label.color);
+                    return (
+                      <span
+                        key={index}
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs ${colorConfig.bg} ${colorConfig.text}`}
+                      >
+                        {label.text}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Show assignees if present */}
+              {card.assignees && card.assignees.length > 0 && (
+                <div className="mt-2 flex -space-x-1">
+                  {card.assignees.map((assignee, index) => (
+                    <AssigneeAvatar key={index} assignee={assignee} />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-          <div className="flex gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0"
-              onClick={handleOpenDialog}
-              title="Edit task"
-            >
-              <Pencil className="h-3 w-3" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-destructive h-6 w-6 p-0"
-              onClick={handleDelete}
-              title="Delete task"
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
-          </div>
-        </div>
-
-        <div className="mt-2 flex flex-col gap-2">
-          {/* Labels */}
-          {card.labels && card.labels.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {card.labels.map((label, index) => {
-                const colorConfig = getColorConfig(label.color);
-                return (
-                  <span
-                    key={index}
-                    className={`${colorConfig.bg} ${colorConfig.text} rounded-full px-2 py-0.5 text-xs`}
-                  >
-                    {label.text}
-                  </span>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Assignees */}
-          {card.assignees && card.assignees.length > 0 && (
-            <div className="flex items-center gap-1">
-              <UserCircle className="text-muted-foreground h-3.5 w-3.5" />
-              <div className="flex -space-x-2">
-                {card.assignees.slice(0, 3).map((assignee) => (
-                  <AssigneeAvatar key={assignee.id} assignee={assignee} />
-                ))}
-                {card.assignees.length > 3 && (
-                  <div className="border-background bg-muted flex h-5 w-5 items-center justify-center rounded-full border text-[8px] font-medium">
-                    +{card.assignees.length - 3}
-                  </div>
-                )}
-              </div>
+          {!isReadOnly && (
+            <div className="flex flex-shrink-0 space-x-0.5">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={handleOpenDialog}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-red-500"
+                onClick={handleDelete}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
             </div>
           )}
         </div>
       </div>
 
+      {/* Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Edit Task</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label htmlFor="title" className="text-sm font-medium">
+          <div className="grid gap-4 py-4">
+            {/* Title field */}
+            <div>
+              <label htmlFor="title" className="mb-2 block text-sm font-medium">
                 Title
               </label>
               <Input
                 id="title"
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
-                placeholder="Task title"
               />
             </div>
 
-            <div className="space-y-2">
-              <label htmlFor="description" className="text-sm font-medium">
+            {/* Description field */}
+            <div>
+              <label
+                htmlFor="description"
+                className="mb-2 block text-sm font-medium"
+              >
                 Description
               </label>
               <Textarea
                 id="description"
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
-                placeholder="Task description (optional)"
                 rows={3}
               />
             </div>
 
-            <TaskLabelPicker
-              labels={editLabels}
-              onLabelsChange={setEditLabels}
-            />
-
-            <BoardMembersProvider boardId={boardId}>
-              <TaskAssignees
-                boardId={boardId}
-                assignees={editAssignees}
-                onChange={setEditAssignees}
-              />
-            </BoardMembersProvider>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
+            {/* Status field */}
+            <div>
+              <label
+                htmlFor="status"
+                className="mb-2 block text-sm font-medium"
+              >
+                Status
+              </label>
               <div className="flex space-x-2">
-                <Button
-                  variant={editStatus === "todo" ? "default" : "outline"}
-                  size="sm"
+                <button
+                  type="button"
                   onClick={() => setEditStatus("todo")}
+                  className={`flex items-center space-x-1 rounded-md px-3 py-1 text-sm ${
+                    editStatus === "todo"
+                      ? "bg-gray-100 text-gray-900"
+                      : "text-gray-600 hover:bg-gray-50"
+                  }`}
                 >
-                  <Circle className="mr-1 h-4 w-4" /> To Do
-                </Button>
-                <Button
-                  variant={editStatus === "in-progress" ? "default" : "outline"}
-                  size="sm"
+                  <Circle className="h-4 w-4" />
+                  <span>Todo</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setEditStatus("in-progress")}
+                  className={`flex items-center space-x-1 rounded-md px-3 py-1 text-sm ${
+                    editStatus === "in-progress"
+                      ? "bg-blue-100 text-blue-900"
+                      : "text-gray-600 hover:bg-gray-50"
+                  }`}
                 >
-                  <Clock className="mr-1 h-4 w-4" /> In Progress
-                </Button>
-                <Button
-                  variant={editStatus === "completed" ? "default" : "outline"}
-                  size="sm"
+                  <Clock className="h-4 w-4" />
+                  <span>In Progress</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setEditStatus("completed")}
+                  className={`flex items-center space-x-1 rounded-md px-3 py-1 text-sm ${
+                    editStatus === "completed"
+                      ? "bg-green-100 text-green-900"
+                      : "text-gray-600 hover:bg-gray-50"
+                  }`}
                 >
-                  <CheckCircle2 className="mr-1 h-4 w-4" /> Completed
-                </Button>
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>Completed</span>
+                </button>
               </div>
+            </div>
+
+            {/* Labels field */}
+            <div>
+              <TaskLabelPicker
+                labels={editLabels}
+                onLabelsChange={setEditLabels}
+              />
+            </div>
+
+            {/* Assignees field */}
+            <div>
+              <label className="mb-2 block text-sm font-medium">
+                Assignees
+              </label>
+              <BoardMembersProvider boardId={boardId}>
+                <TaskAssignees
+                  boardId={boardId}
+                  assignees={editAssignees}
+                  onChange={setEditAssignees}
+                />
+              </BoardMembersProvider>
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsDialogOpen(false)}
+            >
               Cancel
             </Button>
-            <Button onClick={handleSaveChanges} disabled={!editTitle.trim()}>
+            <Button
+              type="button"
+              onClick={handleSaveChanges}
+              disabled={!editTitle.trim()}
+            >
               Save Changes
             </Button>
           </DialogFooter>

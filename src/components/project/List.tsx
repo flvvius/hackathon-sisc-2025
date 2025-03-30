@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useDrop } from "react-dnd";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -14,8 +14,9 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import TaskAssignees from "~/components/project/TaskAssignees";
-import { BoardMembersProvider } from "~/hooks/useBoardMembers";
+import { BoardMembersProvider, useBoardMembers } from "~/hooks/useBoardMembers";
 import type { CardItem, UserInfo } from "~/lib/types";
+import { useAuth } from "@clerk/nextjs";
 
 interface ListProps {
   id: string;
@@ -61,26 +62,36 @@ export default function List({
   const [newCardTitle, setNewCardTitle] = useState("");
   const [newCardDescription, setNewCardDescription] = useState("");
   const [newCardAssignees, setNewCardAssignees] = useState<UserInfo[]>([]);
+  const { userId } = useAuth();
   const listRef = useRef<HTMLDivElement>(null);
+
+  // Use the BoardMembersProvider context to access members
+  const { members } = useBoardMembers();
+
+  // Find the current user's member record to determine their role
+  const currentUserMember = members.find((member) => member.userId === userId);
+  const isViewer = currentUserMember?.role === "viewer";
 
   // Set up drop target
   const [{ isOver }, drop] = useDrop({
     accept: "CARD",
     drop: (item: { id: string; listId: string }) => {
-      if (item.listId !== id) {
+      if (!isViewer && item.listId !== id) {
         void onMoveCard(item.id, item.listId, id);
       }
     },
     collect: (monitor) => ({
       isOver: !!monitor.isOver(),
     }),
+    // Disable drop for viewers
+    canDrop: () => !isViewer,
   });
 
   // Connect the drop ref to the DOM element
   drop(listRef);
 
   const handleCreateCard = async () => {
-    if (newCardTitle.trim()) {
+    if (newCardTitle.trim() && !isViewer) {
       const newCard = await onCreateCard(
         id,
         newCardTitle,
@@ -104,30 +115,32 @@ export default function List({
     <div
       ref={listRef}
       className={`bg-muted/20 flex h-full w-72 shrink-0 flex-col rounded-md border ${
-        isOver ? "border-blue-500" : ""
+        isOver && !isViewer ? "border-blue-500" : ""
       }`}
     >
       <div className="flex items-center justify-between border-b p-2">
         <h3 className="text-sm font-medium">{title}</h3>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onSelect={() => alert("Rename list not implemented")}
-            >
-              Rename List
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onSelect={() => alert("Delete list not implemented")}
-            >
-              Delete List
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {!isViewer && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onSelect={() => alert("Rename list not implemented")}
+              >
+                Rename List
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => alert("Delete list not implemented")}
+              >
+                Delete List
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       <div className="flex flex-1 flex-col gap-2 overflow-y-auto p-2">
@@ -141,10 +154,11 @@ export default function List({
               void onUpdateCard(cardId, data);
             }}
             deleteCard={() => void onDeleteCard(card.id)}
+            isReadOnly={isViewer}
           />
         ))}
 
-        {showAddForm ? (
+        {showAddForm && !isViewer ? (
           <div className="bg-background rounded-md border p-2 shadow-sm">
             <Input
               value={newCardTitle}
@@ -180,15 +194,17 @@ export default function List({
             </div>
           </div>
         ) : (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground justify-start"
-            onClick={() => setShowAddForm(true)}
-          >
-            <Plus className="mr-1 h-4 w-4" />
-            Add a task
-          </Button>
+          !isViewer && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground justify-start"
+              onClick={() => setShowAddForm(true)}
+            >
+              <Plus className="mr-1 h-4 w-4" />
+              Add a task
+            </Button>
+          )
         )}
       </div>
     </div>

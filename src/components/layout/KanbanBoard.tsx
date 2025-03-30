@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import type { CardItem, ListItem, DbList, DbCard } from "~/lib/types";
 import { Select } from "~/components/ui/select";
+import { BoardMembersProvider } from "~/hooks/useBoardMembers";
 
 export default function KanbanBoard() {
   const {
@@ -175,7 +176,9 @@ export default function KanbanBoard() {
       // Show user-friendly permission error messages
       if (err instanceof Error) {
         if (err.message.includes("Viewers do not have permission")) {
-          toast.error("You don't have permission to create tasks. Viewers can only view the board.");
+          toast.error(
+            "You don't have permission to create tasks. Viewers can only view the board.",
+          );
         } else {
           toast.error(err.message);
         }
@@ -193,7 +196,7 @@ export default function KanbanBoard() {
   ) => {
     try {
       // First update the UI optimistically
-    setLists((prevLists) => {
+      setLists((prevLists) => {
         const newLists = [...prevLists];
         const sourceListIndex = newLists.findIndex(
           (list) => list.id === sourceListId,
@@ -274,7 +277,7 @@ export default function KanbanBoard() {
       const { _shouldSort, ...dataToUpdate } = data;
 
       // Update UI optimistically
-    setLists((prevLists) => {
+      setLists((prevLists) => {
         const newLists = prevLists.map((list) => {
           const updatedCards = list.cards.map((card) =>
             card.id === cardId ? { ...card, ...dataToUpdate } : card,
@@ -301,14 +304,16 @@ export default function KanbanBoard() {
       // Show user-friendly permission error messages
       if (err instanceof Error) {
         if (err.message.includes("Viewers do not have permission")) {
-          toast.error("You don't have permission to update tasks. Viewers can only view the board.");
+          toast.error(
+            "You don't have permission to update tasks. Viewers can only view the board.",
+          );
         } else {
           toast.error(err.message);
         }
       } else {
         toast.error("Failed to update card");
       }
-      
+
       // Revert the optimistic update by refetching the lists
       if (activeBoard) {
         await refreshLists(activeBoard);
@@ -333,14 +338,16 @@ export default function KanbanBoard() {
       // Show user-friendly permission error messages
       if (err instanceof Error) {
         if (err.message.includes("Viewers do not have permission")) {
-          toast.error("You don't have permission to delete tasks. Viewers can only view the board.");
+          toast.error(
+            "You don't have permission to delete tasks. Viewers can only view the board.",
+          );
         } else {
           toast.error(err.message);
         }
       } else {
         toast.error("Failed to delete card");
       }
-      
+
       // Revert the optimistic update
       if (activeBoard) {
         await refreshLists(activeBoard);
@@ -464,29 +471,30 @@ export default function KanbanBoard() {
         </div>
       ) : (
         <div className="flex h-full flex-1 space-x-4 overflow-x-auto p-4">
-        {lists.map((list) => (
-            <List
-            key={list.id}
-              id={list.id}
-              title={list.title}
-              cards={list.cards}
-              boardId={activeBoard ?? ""}
-              onCreateCard={handleCreateCard}
-              onMoveCard={handleMoveCard}
-              onUpdateCard={handleUpdateCard}
-              onDeleteCard={handleDeleteCard}
-          />
-        ))}
+          {lists.map((list) => (
+            <BoardMembersProvider key={list.id} boardId={activeBoard ?? ""}>
+              <List
+                id={list.id}
+                title={list.title}
+                cards={list.cards}
+                boardId={activeBoard ?? ""}
+                onCreateCard={handleCreateCard}
+                onMoveCard={handleMoveCard}
+                onUpdateCard={handleUpdateCard}
+                onDeleteCard={handleDeleteCard}
+              />
+            </BoardMembersProvider>
+          ))}
 
-        {showNewListInput ? (
+          {showNewListInput ? (
             <div className="bg-muted/20 flex h-fit w-72 shrink-0 flex-col rounded-md border p-2">
-            <Input
-              value={newListTitle}
-              onChange={(e) => setNewListTitle(e.target.value)}
-              placeholder="Enter list title..."
-              className="mb-2"
-              autoFocus
-            />
+              <Input
+                value={newListTitle}
+                onChange={(e) => setNewListTitle(e.target.value)}
+                placeholder="Enter list title..."
+                className="mb-2"
+                autoFocus
+              />
               <div className="flex space-x-2">
                 <Button
                   size="sm"
@@ -497,31 +505,31 @@ export default function KanbanBoard() {
                   }}
                   disabled={!newListTitle.trim()}
                 >
-                Add List
-              </Button>
-              <Button
+                  Add List
+                </Button>
+                <Button
                   size="sm"
                   variant="ghost"
-                onClick={() => {
+                  onClick={() => {
                     setShowNewListInput(false);
                     setNewListTitle("");
-                }}
-              >
-                Cancel
-              </Button>
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
             </div>
-          </div>
-        ) : (
-          <Button
+          ) : (
+            <Button
               variant="outline"
               className="text-muted-foreground h-fit w-72 justify-start border-dashed px-3 py-2"
-            onClick={() => setShowNewListInput(true)}
-          >
+              onClick={() => setShowNewListInput(true)}
+            >
               <PlusIcon className="mr-2 h-4 w-4" />
               Add List
-          </Button>
-        )}
-      </div>
+            </Button>
+          )}
+        </div>
       )}
     </div>
   );
