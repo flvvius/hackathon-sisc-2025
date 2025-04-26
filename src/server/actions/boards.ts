@@ -457,6 +457,52 @@ export async function updateBoard(
   }
 }
 
+export async function createList(
+  boardId: string,
+  title: string,
+  position: number,
+) {
+  if (!boardId || !title.trim()) {
+    throw new Error("Board ID and list title are required");
+  }
+
+  const { userId } = await auth();
+  if (!userId) {
+    throw new Error("You must be logged in to create lists");
+  }
+
+  // Check if user is a member of the board
+  const member = await db.query.boardMembers.findFirst({
+    where: and(
+      eq(boardMembers.boardId, boardId),
+      eq(boardMembers.userId, userId),
+    ),
+  });
+  if (!member) {
+    throw new Error("You do not have access to this board");
+  }
+  if (member.role === "viewer") {
+    throw new Error("Viewers do not have permission to create lists");
+  }
+
+  const listId = uuidv4();
+  await db.insert(lists).values({
+    id: listId,
+    title: title.trim(),
+    boardId,
+    position,
+  });
+
+  // Return the new list (with empty cards array)
+  return {
+    id: listId,
+    title: title.trim(),
+    boardId,
+    position,
+    cards: [],
+  };
+}
+
 // Helper functions
 async function getNextCardPosition(listId: string): Promise<number> {
   const listCards = await db.query.cards.findMany({

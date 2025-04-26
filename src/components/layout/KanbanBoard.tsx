@@ -16,6 +16,7 @@ import {
   updateCard,
   deleteCard,
   updateBoard,
+  createList,
 } from "~/server/actions/boards";
 import { toast } from "sonner";
 import type { CardItem, ListItem, DbList, DbCard } from "~/lib/types";
@@ -498,8 +499,24 @@ export default function KanbanBoard() {
               <div className="flex space-x-2">
                 <Button
                   size="sm"
-                  onClick={() => {
-                    // TODO: Implement adding new list
+                  onClick={async () => {
+                    if (!newListTitle.trim() || !activeBoard) return;
+                    try {
+                      const newList = await createList(
+                        activeBoard,
+                        newListTitle,
+                        lists.length,
+                      );
+                      if (newList) {
+                        setLists([...lists, newList]);
+                      }
+                    } catch (err) {
+                      if (err instanceof Error) {
+                        toast.error(err.message);
+                      } else {
+                        toast.error("Failed to create list");
+                      }
+                    }
                     setShowNewListInput(false);
                     setNewListTitle("");
                   }}
